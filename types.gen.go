@@ -145,6 +145,19 @@ var AllKubernetesClusterStatuss = []KubernetesClusterStatus{
 	KubernetesClusterStatusError,
 }
 
+// Defines values for LoadbalancerHealthCheckProtocol.
+const (
+	LoadbalancerHealthCheckProtocolHttp  LoadbalancerHealthCheckProtocol = "http"
+	LoadbalancerHealthCheckProtocolHttps LoadbalancerHealthCheckProtocol = "https"
+	LoadbalancerHealthCheckProtocolTcp   LoadbalancerHealthCheckProtocol = "tcp"
+)
+
+var AllLoadbalancerHealthCheckProtocols = []LoadbalancerHealthCheckProtocol{
+	LoadbalancerHealthCheckProtocolHttp,
+	LoadbalancerHealthCheckProtocolHttps,
+	LoadbalancerHealthCheckProtocolTcp,
+}
+
 // Defines values for LoadbalancerMode.
 const (
 	LoadbalancerModeTcp LoadbalancerMode = "tcp"
@@ -311,6 +324,30 @@ var AllCreateFloatingIPJSONBodyVersions = []CreateFloatingIPJSONBodyVersion{
 	CreateFloatingIPJSONBodyVersionIpv4,
 }
 
+// Defines values for CreateInstanceJSONBodyPublicIpMode.
+const (
+	CreateInstanceJSONBodyPublicIpModeEphemeral CreateInstanceJSONBodyPublicIpMode = "ephemeral"
+	CreateInstanceJSONBodyPublicIpModeNone      CreateInstanceJSONBodyPublicIpMode = "none"
+)
+
+var AllCreateInstanceJSONBodyPublicIpModes = []CreateInstanceJSONBodyPublicIpMode{
+	CreateInstanceJSONBodyPublicIpModeEphemeral,
+	CreateInstanceJSONBodyPublicIpModeNone,
+}
+
+// Defines values for CreateLoadbalancerJSONBodyHealthCheckProtocol.
+const (
+	CreateLoadbalancerJSONBodyHealthCheckProtocolHttp  CreateLoadbalancerJSONBodyHealthCheckProtocol = "http"
+	CreateLoadbalancerJSONBodyHealthCheckProtocolHttps CreateLoadbalancerJSONBodyHealthCheckProtocol = "https"
+	CreateLoadbalancerJSONBodyHealthCheckProtocolTcp   CreateLoadbalancerJSONBodyHealthCheckProtocol = "tcp"
+)
+
+var AllCreateLoadbalancerJSONBodyHealthCheckProtocols = []CreateLoadbalancerJSONBodyHealthCheckProtocol{
+	CreateLoadbalancerJSONBodyHealthCheckProtocolHttp,
+	CreateLoadbalancerJSONBodyHealthCheckProtocolHttps,
+	CreateLoadbalancerJSONBodyHealthCheckProtocolTcp,
+}
+
 // Error defines model for Error.
 type Error struct {
 	// Code The Saga Data error code.
@@ -319,6 +356,9 @@ type Error struct {
 
 	// Message An explanation of what went wrong.
 	Message string `json:"message"`
+
+	// TraceId OpenTelemetry trace ID for locating this request in Jaeger.
+	TraceId *string `json:"trace_id"`
 }
 
 // Filesystem defines model for Filesystem.
@@ -673,6 +713,14 @@ type Loadbalancer struct {
 	// ExternalIp The external IP of the load balancer.
 	ExternalIp *string `json:"external_ip"`
 
+	// FloatingIpId The ID of the floating IP used as the external IP of the load balancer.
+	FloatingIpId *string `json:"floating_ip_id"`
+	HealthCheck  *struct {
+		Path     *string                         `json:"path,omitempty"`
+		Port     int                             `json:"port"`
+		Protocol LoadbalancerHealthCheckProtocol `json:"protocol"`
+	} `json:"healthCheck,omitempty"`
+
 	// Id A unique identifier for each load balancer. This is automatically generated.
 	Id string `json:"id"`
 
@@ -695,6 +743,9 @@ type Loadbalancer struct {
 	Status    LoadbalancerStatus `json:"status"`
 	UpdatedAt Timestamp          `json:"updated_at"`
 }
+
+// LoadbalancerHealthCheckProtocol defines model for Loadbalancer.HealthCheck.Protocol.
+type LoadbalancerHealthCheckProtocol string
 
 // LoadbalancerMode The load balancer mode.
 type LoadbalancerMode string
@@ -932,11 +983,53 @@ type VolumeId = string
 // VolumeType The volume type.
 type VolumeType string
 
+// WorkerNodeConfig Configuration for worker nodes to create alongside a Kubernetes cluster.
+type WorkerNodeConfig struct {
+	// Count Number of worker nodes to create.
+	Count int `json:"count"`
+
+	// Image A unique number that can be used to identify and reference a specific image.
+	Image ImageId `json:"image"`
+
+	// PrivateNetworks Private network IDs for the worker nodes. Must include the cluster's network.
+	// If omitted, defaults to the cluster's network only.
+	PrivateNetworks *[]PrivateNetworkId `json:"private_networks"`
+
+	// SecurityGroups Security group IDs to attach to the worker nodes.
+	SecurityGroups *[]SecurityGroupId `json:"security_groups"`
+
+	// SshKeys SSH key IDs to install on the worker nodes.
+	SshKeys []InstanceSSHKeyId `json:"ssh_keys"`
+
+	// Type The instance type identifier.
+	Type InstanceType `json:"type"`
+}
+
+// WorkerNodeResult Result of a single worker node creation attempt.
+type WorkerNodeResult struct {
+	// Error Error message (present on failure).
+	Error *string `json:"error"`
+
+	// InstanceId Created instance ID (present on success).
+	InstanceId *string `json:"instance_id"`
+
+	// Name Worker node name.
+	Name string `json:"name"`
+}
+
 // PageQueryParameter A positive integer to choose the page to return.
 type PageQueryParameter = int
 
 // PerPageQueryParameter A positive integer lower or equal to 100 to select the number of items to return.
 type PerPageQueryParameter = int
+
+// KubernetesClusterCreatedResponse defines model for CreateKubernetesClusterResponse.
+type KubernetesClusterCreatedResponse struct {
+	Cluster KubernetesCluster `json:"cluster"`
+
+	// WorkerNodes Results for each worker node creation attempt. Present only when worker_nodes was requested.
+	WorkerNodes *[]WorkerNodeResult `json:"worker_nodes"`
+}
 
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse = Error
@@ -1246,6 +1339,14 @@ type CreateInstanceJSONBody struct {
 	// PrivateNetworks An array of network ids.
 	PrivateNetworks *[]PrivateNetworkId `json:"private_networks,omitempty"`
 
+	// PublicIpMode Controls public IPv4 assignment.
+	// - `ephemeral` — allocate a temporary public IP that is released when the instance is deleted.
+	//   This is also the default when neither `public_ip_mode` nor `floating_ip` is provided.
+	// - `none` — do not assign any public IPv4 address.
+	//
+	// Mutually exclusive with `floating_ip`. Providing both returns HTTP 400.
+	PublicIpMode *CreateInstanceJSONBodyPublicIpMode `json:"public_ip_mode,omitempty"`
+
 	// PublicIpv6 A boolean value indicating whether the instance should have an ipv6 address or not.
 	PublicIpv6 *InstancePublicIpv6 `json:"public_ipv6,omitempty"`
 
@@ -1272,6 +1373,9 @@ type CreateInstanceJSONBody struct {
 	// Volumes An array of volume ids.
 	Volumes *[]VolumeId `json:"volumes,omitempty"`
 }
+
+// CreateInstanceJSONBodyPublicIpMode defines parameters for CreateInstance.
+type CreateInstanceJSONBodyPublicIpMode string
 
 // UpdateInstanceJSONBody defines parameters for UpdateInstance.
 type UpdateInstanceJSONBody struct {
@@ -1320,11 +1424,14 @@ type ListKubernetesClustersParams struct {
 
 // CreateKubernetesClusterJSONBody defines parameters for CreateKubernetesCluster.
 type CreateKubernetesClusterJSONBody struct {
-	// Name The name for the cluster.
+	// Name Name for the cluster.
 	Name string `json:"name"`
 
 	// Network The network ID for the cluster.
 	Network *string `json:"network"`
+
+	// WorkerNodes Configuration for worker nodes to create alongside a Kubernetes cluster.
+	WorkerNodes *WorkerNodeConfig `json:"worker_nodes,omitempty"`
 }
 
 // UpdateKubernetesClusterJSONBody defines parameters for UpdateKubernetesCluster.
@@ -1344,6 +1451,14 @@ type CreateLoadbalancerJSONBody struct {
 	// Description The human-readable description for the load balancer.
 	Description *string `json:"description,omitempty"`
 
+	// FloatingIpId The ID of an existing floating IP to use as the external IP of the load balancer.
+	FloatingIpId *string `json:"floating_ip_id,omitempty"`
+	HealthCheck  *struct {
+		Path     *string                                       `json:"path,omitempty"`
+		Port     int                                           `json:"port"`
+		Protocol CreateLoadbalancerJSONBodyHealthCheckProtocol `json:"protocol"`
+	} `json:"healthCheck,omitempty"`
+
 	// Name The human-readable name for the load balancer.
 	Name string `json:"name"`
 
@@ -1357,10 +1472,16 @@ type CreateLoadbalancerJSONBody struct {
 	Region Region `json:"region"`
 }
 
+// CreateLoadbalancerJSONBodyHealthCheckProtocol defines parameters for CreateLoadbalancer.
+type CreateLoadbalancerJSONBodyHealthCheckProtocol string
+
 // UpdateLoadbalancerJSONBody defines parameters for UpdateLoadbalancer.
 type UpdateLoadbalancerJSONBody struct {
 	// Description The human-readable description for the load balancer.
 	Description *string `json:"description,omitempty"`
+
+	// FloatingIpId The ID of an existing floating IP to use as the external IP of the load balancer.
+	FloatingIpId *string `json:"floating_ip_id,omitempty"`
 
 	// Name The human-readable name for the load balancer.
 	Name *string `json:"name,omitempty"`

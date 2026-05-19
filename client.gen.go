@@ -4834,7 +4834,7 @@ func (r ListKubernetesClustersResponse) StatusCode() int {
 type CreateKubernetesClusterResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON201      *SingleKubernetesClusterResponse
+	JSON201      *KubernetesClusterCreatedResponse
 	JSONDefault  *ErrorResponse
 }
 
@@ -7177,7 +7177,7 @@ func ParseCreateKubernetesClusterResponse(rsp *http.Response) (*CreateKubernetes
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
-		var dest SingleKubernetesClusterResponse
+		var dest KubernetesClusterCreatedResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
