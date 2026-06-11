@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/sagadata-public/sagadata-go"
+	"github.com/epilayer-public/epilayer-go"
 )
 
 // Generic pointer in Go 1.18+. Alternatively use "k8s.io/utils/pointer"
@@ -16,14 +16,14 @@ func pointer[T any](v T) *T {
 func run() error {
 	ctx := context.Background()
 
-	client, err := sagadata.NewSagaDataClient(sagadata.ClientConfig{
-		Token: os.Getenv("SAGADATA_TOKEN"),
+	client, err := epilayer.NewEpiLayerClient(epilayer.ClientConfig{
+		Token: os.Getenv("EPILAYER_TOKEN"),
 	})
 	if err != nil {
 		return err
 	}
 
-	resp, err := client.ListInstancesPaginatedWithResponse(ctx, &sagadata.ListInstancesPaginatedParams{
+	resp, err := client.ListInstancesPaginatedWithResponse(ctx, &epilayer.ListInstancesPaginatedParams{
 		Page:    pointer(1),
 		PerPage: pointer(100),
 	})

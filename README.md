@@ -1,8 +1,8 @@
-# Saga Data Go Client
+# EpiLayer Go Client
 
 The Genesis Cloud Go client provides the ability to manage each services resources programmatically from scripts or applications.
 
-- [Godoc](https://pkg.go.dev/github.com/sagadata-public/sagadata-go?tab=doc)
+- [Godoc](https://pkg.go.dev/github.com/epilayer-public/epilayer-go?tab=doc)
 - [Genesis Cloud API Documentation](https://developers.genesiscloud.com/)
 - [How to generate an API key?](https://support.genesiscloud.com/support/solutions/articles/47001126146-how-to-generate-an-api-token-)
 
@@ -10,7 +10,7 @@ This repository is licensed under Mozilla Public License 2.0 (no copyleft except
 
 # Maintainers
 
-This client is maintained by Saga Data. If you encounter any problems, feel free to create issues or pull requests.
+This client is maintained by EpiLayer. If you encounter any problems, feel free to create issues or pull requests.
 
 ## Requirements
 
@@ -19,16 +19,16 @@ This client is maintained by Saga Data. If you encounter any problems, feel free
 ## Installation
 
 ```bash
-go get github.com/sagadata-public/sagadata-go
+go get github.com/epilayer-public/epilayer-go
 ```
 
 ## Getting Started
 
 ```go
-import "github.com/sagadata-public/sagadata-go"
+import "github.com/epilayer-public/epilayer-go"
 
-client, err := sagadata.NewSagaDataClient(sagadata.ClientConfig{
-	Token: os.Getenv("SAGADATA_TOKEN"),
+client, err := epilayer.NewEpiLayerClient(epilayer.ClientConfig{
+	Token: os.Getenv("EPILAYER_TOKEN"),
 })
 if err != nil {
 	// ...
@@ -47,11 +47,11 @@ for _, instance := range resp.Instances {
 
 ## Examples
 
-You can find additional examples in the [GoDoc](https://pkg.go.dev/github.com/sagadata-public/sagadata-go?tab=doc) or
+You can find additional examples in the [GoDoc](https://pkg.go.dev/github.com/epilayer-public/epilayer-go?tab=doc) or
 check the [examples folder](./examples).
 
 ```sh
-SAGADATA_TOKEN="XXXX" go run ./examples/list-instances
+EPILAYER_TOKEN="XXXX" go run ./examples/list-instances
 ```
 
 ## Development or update of OpenAPI document

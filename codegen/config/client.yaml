@@ -1,5 +1,5 @@
 ---
-package: sagadata
+package: epilayer
 generate:
   client: true
 output: ../client.gen.go # relative to codegen.go

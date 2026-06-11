@@ -1,4 +1,4 @@
-module github.com/sagadata-public/sagadata-go
+module github.com/epilayer-public/epilayer-go
 
 go 1.24.5
 
