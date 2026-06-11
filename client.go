@@ -1,4 +1,4 @@
-package sagadata
+package epilayer
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/oapi-codegen/oapi-codegen/v2/pkg/securityprovider"
 )
 
-const DefaultEndpoint = "https://public-api.nord-no-krs-1.sagadata.tum.fail/compute/v1"
+const DefaultEndpoint = "https://public-api.krs-1.epilayer.eu/compute/v1"
 
 type ClientConfig struct {
 	Endpoint string
@@ -38,7 +38,7 @@ func newTokenFileInterceptor(tokenFile string) RequestEditorFn {
 	}
 }
 
-func NewSagaDataClient(config ClientConfig, opts ...ClientOption) (*ClientWithResponses, error) {
+func NewEpiLayerClient(config ClientConfig, opts ...ClientOption) (*ClientWithResponses, error) {
 	if config.Endpoint == "" {
 		config.Endpoint = DefaultEndpoint
 	}

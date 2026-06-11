@@ -1,5 +1,5 @@
 ---
-package: sagadata
+package: epilayer
 generate:
   models: true
 output: ../types.gen.go # relative to codegen.go
