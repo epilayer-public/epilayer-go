@@ -701,6 +701,9 @@ type InstancesAvailability struct {
 type KubernetesCluster struct {
 	CreatedAt Timestamp `json:"created_at"`
 
+	// DeployCsi Whether the CSI driver is deployed to this cluster.
+	DeployCsi *KubernetesClusterDeployCsi `json:"deploy_csi,omitempty"`
+
 	// Id A unique identifier for each Kubernetes cluster. This is automatically generated.
 	Id string `json:"id"`
 
@@ -718,6 +721,9 @@ type KubernetesCluster struct {
 	Status    KubernetesClusterStatus `json:"status"`
 	UpdatedAt Timestamp               `json:"updated_at"`
 }
+
+// KubernetesClusterDeployCsi Whether the CSI driver is deployed to this cluster.
+type KubernetesClusterDeployCsi = bool
 
 // KubernetesClusterStatus The Kubernetes cluster status.
 type KubernetesClusterStatus string
@@ -1451,6 +1457,9 @@ type ListKubernetesClustersParams struct {
 
 // CreateKubernetesClusterJSONBody defines parameters for CreateKubernetesCluster.
 type CreateKubernetesClusterJSONBody struct {
+	// DeployCsi Whether the CSI driver is deployed to this cluster.
+	DeployCsi *KubernetesClusterDeployCsi `json:"deploy_csi,omitempty"`
+
 	// ManageLoadBalancers Automatically provision load balancers for Services of type
 	// LoadBalancer. Immutable after creation.
 	ManageLoadBalancers *bool `json:"manage_load_balancers,omitempty"`
