@@ -107,15 +107,15 @@ var AllInstanceBillingTypes = []InstanceBillingType{
 
 // Defines values for InstanceStatus.
 const (
-	InstanceStatusActive         InstanceStatus = "active"
-	InstanceStatusCreating       InstanceStatus = "creating"
-	InstanceStatusDeleting       InstanceStatus = "deleting"
-	InstanceStatusError          InstanceStatus = "error"
-	InstanceStatusPendingPayment InstanceStatus = "pending_payment"
-	InstanceStatusResetting      InstanceStatus = "resetting"
-	InstanceStatusStarting       InstanceStatus = "starting"
-	InstanceStatusStopped        InstanceStatus = "stopped"
-	InstanceStatusStopping       InstanceStatus = "stopping"
+	InstanceStatusActive             InstanceStatus = "active"
+	InstanceStatusCreating           InstanceStatus = "creating"
+	InstanceStatusDeleting           InstanceStatus = "deleting"
+	InstanceStatusError              InstanceStatus = "error"
+	InstanceStatusErrorunschedulable InstanceStatus = "errorunschedulable"
+	InstanceStatusResetting          InstanceStatus = "resetting"
+	InstanceStatusStarting           InstanceStatus = "starting"
+	InstanceStatusStopped            InstanceStatus = "stopped"
+	InstanceStatusStopping           InstanceStatus = "stopping"
 )
 
 var AllInstanceStatuss = []InstanceStatus{
@@ -123,7 +123,7 @@ var AllInstanceStatuss = []InstanceStatus{
 	InstanceStatusCreating,
 	InstanceStatusDeleting,
 	InstanceStatusError,
-	InstanceStatusPendingPayment,
+	InstanceStatusErrorunschedulable,
 	InstanceStatusResetting,
 	InstanceStatusStarting,
 	InstanceStatusStopped,
@@ -132,10 +132,11 @@ var AllInstanceStatuss = []InstanceStatus{
 
 // Defines values for KubernetesClusterStatus.
 const (
-	KubernetesClusterStatusActive   KubernetesClusterStatus = "active"
-	KubernetesClusterStatusCreating KubernetesClusterStatus = "creating"
-	KubernetesClusterStatusDeleting KubernetesClusterStatus = "deleting"
-	KubernetesClusterStatusError    KubernetesClusterStatus = "error"
+	KubernetesClusterStatusActive    KubernetesClusterStatus = "active"
+	KubernetesClusterStatusCreating  KubernetesClusterStatus = "creating"
+	KubernetesClusterStatusDeleting  KubernetesClusterStatus = "deleting"
+	KubernetesClusterStatusError     KubernetesClusterStatus = "error"
+	KubernetesClusterStatusUpgrading KubernetesClusterStatus = "upgrading"
 )
 
 var AllKubernetesClusterStatuss = []KubernetesClusterStatus{
@@ -143,6 +144,7 @@ var AllKubernetesClusterStatuss = []KubernetesClusterStatus{
 	KubernetesClusterStatusCreating,
 	KubernetesClusterStatusDeleting,
 	KubernetesClusterStatusError,
+	KubernetesClusterStatusUpgrading,
 }
 
 // Defines values for LoadbalancerHealthCheckProtocol.
@@ -324,17 +326,6 @@ var AllCreateFloatingIPJSONBodyVersions = []CreateFloatingIPJSONBodyVersion{
 	CreateFloatingIPJSONBodyVersionIpv4,
 }
 
-// Defines values for CreateInstanceJSONBodyPublicIpMode.
-const (
-	CreateInstanceJSONBodyPublicIpModeEphemeral CreateInstanceJSONBodyPublicIpMode = "ephemeral"
-	CreateInstanceJSONBodyPublicIpModeNone      CreateInstanceJSONBodyPublicIpMode = "none"
-)
-
-var AllCreateInstanceJSONBodyPublicIpModes = []CreateInstanceJSONBodyPublicIpMode{
-	CreateInstanceJSONBodyPublicIpModeEphemeral,
-	CreateInstanceJSONBodyPublicIpModeNone,
-}
-
 // Defines values for CreateLoadbalancerJSONBodyHealthCheckProtocol.
 const (
 	CreateLoadbalancerJSONBodyHealthCheckProtocolHttp  CreateLoadbalancerJSONBodyHealthCheckProtocol = "http"
@@ -478,7 +469,12 @@ type ImageId = string
 
 // Instance defines model for Instance.
 type Instance struct {
-	CreatedAt Timestamp `json:"created_at"`
+	// BootFromNetbootXyz Boot the instance from the netboot.xyz ISO instead of its own boot disk.
+	// This is a debugging option: it makes the instance boot into the netboot.xyz
+	// menu, from where an installer or a rescue system can be network-booted.
+	// The change only takes effect the next time the instance is started or reset.
+	BootFromNetbootXyz *InstanceBootFromNetbootXyz `json:"boot_from_netboot_xyz,omitempty"`
+	CreatedAt          Timestamp                   `json:"created_at"`
 
 	// DiskSize The storage size of the instance's boot volume given in GiB.
 	DiskSize *InstanceDiskSize `json:"disk_size,omitempty"`
@@ -486,14 +482,14 @@ type Instance struct {
 	// DnsName The dns name of your instance.
 	DnsName InstanceDNSName `json:"dns_name"`
 
-	// FloatingIp The floating IP attached to the instance.
-	FloatingIp *struct {
+	// FloatingIpId The floating IP attached to the instance.
+	FloatingIpId *struct {
 		// Id The ID of the floating IP.
 		Id string `json:"id"`
 
 		// Name The name of the floating IP.
 		Name string `json:"name"`
-	} `json:"floating_ip"`
+	} `json:"floating_ip_id"`
 
 	// Hostname The hostname of your instance.
 	Hostname InstanceHostname `json:"hostname"`
@@ -509,6 +505,11 @@ type Instance struct {
 		// Name The image name.
 		Name string `json:"name"`
 	} `json:"image"`
+
+	// IsProtected Specifies if the instance is termination protected.
+	// When set to `true`, it"s not possible to destroy the instance until it"s switched to `false`.
+	// Set to `true` automatically for long-term billed instances.
+	IsProtected *InstanceIsProtected `json:"is_protected,omitempty"`
 
 	// K8sCluster Kubernetes cluster this instance belongs to
 	K8sCluster *string `json:"k8s_cluster"`
@@ -572,8 +573,21 @@ type Instance struct {
 // InstanceAction defines model for Instance.Action.
 type InstanceAction string
 
+// InstanceAssignPublicIp Controls whether a public IPv4 should be assigned to the instance.
+// - `true` — allocate an ephemeral public IPv4. This is the default if unset.
+// - `false` — do not assign any public IPv4 addresses at all.
+//
+// This value must not be `false` when `floating_ip_id` is set.
+type InstanceAssignPublicIp = bool
+
 // InstanceBillingType The billing type of the instance.
 type InstanceBillingType string
+
+// InstanceBootFromNetbootXyz Boot the instance from the netboot.xyz ISO instead of its own boot disk.
+// This is a debugging option: it makes the instance boot into the netboot.xyz
+// menu, from where an installer or a rescue system can be network-booted.
+// The change only takes effect the next time the instance is started or reset.
+type InstanceBootFromNetbootXyz = bool
 
 // InstanceDNSName The dns name of your instance.
 type InstanceDNSName = string
@@ -584,8 +598,9 @@ type InstanceDestroyOnShutdown = bool
 // InstanceDiskSize The storage size of the instance's boot volume given in GiB.
 type InstanceDiskSize = int
 
-// InstanceFloatingIp The id of the floating IP to attach to the instance.
-type InstanceFloatingIp = string
+// InstanceFloatingIpId The id of the floating IP to attach to the instance.
+// Conflicts with `assign_public_ip=false`.
+type InstanceFloatingIpId = string
 
 // InstanceHostname The hostname of your instance.
 type InstanceHostname = string
@@ -686,11 +701,12 @@ type InstancesAvailability struct {
 type KubernetesCluster struct {
 	CreatedAt Timestamp `json:"created_at"`
 
-	// DeployCsi Whether the CSI driver is deployed to this cluster.
-	DeployCsi bool `json:"deploy_csi"`
-
 	// Id A unique identifier for each Kubernetes cluster. This is automatically generated.
 	Id string `json:"id"`
+
+	// ManageLoadBalancers Whether the cluster automatically provisions load balancers for
+	// Services of type LoadBalancer.
+	ManageLoadBalancers *bool `json:"manage_load_balancers,omitempty"`
 
 	// Name The human-readable name for the Kubernetes cluster.
 	Name string `json:"name"`
@@ -990,6 +1006,8 @@ type VolumeId = string
 type VolumeType string
 
 // WorkerNodeConfig Configuration for worker nodes to create alongside a Kubernetes cluster.
+// Worker nodes are created with an ephemeral public IPv4 address, which is
+// required to reach the cluster's control plane endpoint.
 type WorkerNodeConfig struct {
 	// Count Number of worker nodes to create.
 	Count int `json:"count"`
@@ -1295,6 +1313,13 @@ type ListInstancesPaginatedParams struct {
 
 // CreateInstanceJSONBody defines parameters for CreateInstance.
 type CreateInstanceJSONBody struct {
+	// AssignPublicIp Controls whether a public IPv4 should be assigned to the instance.
+	// - `true` — allocate an ephemeral public IPv4. This is the default if unset.
+	// - `false` — do not assign any public IPv4 addresses at all.
+	//
+	// This value must not be `false` when `floating_ip_id` is set.
+	AssignPublicIp *InstanceAssignPublicIp `json:"assign_public_ip,omitempty"`
+
 	// BillingType The billing type of the instance.
 	BillingType *InstanceBillingType `json:"billing_type,omitempty"`
 
@@ -1304,8 +1329,9 @@ type CreateInstanceJSONBody struct {
 	// DiskSize The storage size of the instance's boot volume given in GiB.
 	DiskSize *InstanceDiskSize `json:"disk_size,omitempty"`
 
-	// FloatingIp The id of the floating IP to attach to the instance.
-	FloatingIp *InstanceFloatingIp `json:"floating_ip,omitempty"`
+	// FloatingIpId The id of the floating IP to attach to the instance.
+	// Conflicts with `assign_public_ip=false`.
+	FloatingIpId *InstanceFloatingIpId `json:"floating_ip_id"`
 
 	// Hostname The hostname of your instance.
 	Hostname InstanceHostname `json:"hostname"`
@@ -1345,14 +1371,6 @@ type CreateInstanceJSONBody struct {
 	// PrivateNetworks An array of network ids.
 	PrivateNetworks *[]PrivateNetworkId `json:"private_networks,omitempty"`
 
-	// PublicIpMode Controls public IPv4 assignment.
-	// - `ephemeral` — allocate a temporary public IP that is released when the instance is deleted.
-	//   This is also the default when neither `public_ip_mode` nor `floating_ip` is provided.
-	// - `none` — do not assign any public IPv4 address.
-	//
-	// Mutually exclusive with `floating_ip`. Providing both returns HTTP 400.
-	PublicIpMode *CreateInstanceJSONBodyPublicIpMode `json:"public_ip_mode,omitempty"`
-
 	// PublicIpv6 A boolean value indicating whether the instance should have an ipv6 address or not.
 	PublicIpv6 *InstancePublicIpv6 `json:"public_ipv6,omitempty"`
 
@@ -1380,11 +1398,14 @@ type CreateInstanceJSONBody struct {
 	Volumes *[]VolumeId `json:"volumes,omitempty"`
 }
 
-// CreateInstanceJSONBodyPublicIpMode defines parameters for CreateInstance.
-type CreateInstanceJSONBodyPublicIpMode string
-
 // UpdateInstanceJSONBody defines parameters for UpdateInstance.
 type UpdateInstanceJSONBody struct {
+	// BootFromNetbootXyz Boot the instance from the netboot.xyz ISO instead of its own boot disk.
+	// This is a debugging option: it makes the instance boot into the netboot.xyz
+	// menu, from where an installer or a rescue system can be network-booted.
+	// The change only takes effect the next time the instance is started or reset.
+	BootFromNetbootXyz *InstanceBootFromNetbootXyz `json:"boot_from_netboot_xyz,omitempty"`
+
 	// DiskSize The storage size of the instance's boot volume given in GiB.
 	DiskSize *InstanceDiskSize `json:"disk_size,omitempty"`
 
@@ -1430,8 +1451,9 @@ type ListKubernetesClustersParams struct {
 
 // CreateKubernetesClusterJSONBody defines parameters for CreateKubernetesCluster.
 type CreateKubernetesClusterJSONBody struct {
-	// DeployCsi Deploy the CSI driver to this cluster.
-	DeployCsi *bool `json:"deploy_csi,omitempty"`
+	// ManageLoadBalancers Automatically provision load balancers for Services of type
+	// LoadBalancer. Immutable after creation.
+	ManageLoadBalancers *bool `json:"manage_load_balancers,omitempty"`
 
 	// Name Name for the cluster.
 	Name string `json:"name"`
@@ -1440,6 +1462,8 @@ type CreateKubernetesClusterJSONBody struct {
 	Network *string `json:"network"`
 
 	// WorkerNodes Configuration for worker nodes to create alongside a Kubernetes cluster.
+	// Worker nodes are created with an ephemeral public IPv4 address, which is
+	// required to reach the cluster's control plane endpoint.
 	WorkerNodes *WorkerNodeConfig `json:"worker_nodes,omitempty"`
 }
 
@@ -1517,6 +1541,7 @@ type CreatePrivateNetworkJSONBody struct {
 	Description *string `json:"description,omitempty"`
 
 	// GatewayIpv4 The IPv4 default gateway to advertise to instances via DHCP.
+	// Must be an IP address within the cidr_v4 range.
 	GatewayIpv4 *string `json:"gateway_ipv4,omitempty"`
 
 	// Name The human-readable name set for the private network.
