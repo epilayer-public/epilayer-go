@@ -482,14 +482,14 @@ type Instance struct {
 	// DnsName The dns name of your instance.
 	DnsName InstanceDNSName `json:"dns_name"`
 
-	// FloatingIpId The floating IP attached to the instance.
-	FloatingIpId *struct {
+	// FloatingIp The floating IP attached to the instance.
+	FloatingIp *struct {
 		// Id The ID of the floating IP.
 		Id string `json:"id"`
 
 		// Name The name of the floating IP.
 		Name string `json:"name"`
-	} `json:"floating_ip_id"`
+	} `json:"floating_ip"`
 
 	// Hostname The hostname of your instance.
 	Hostname InstanceHostname `json:"hostname"`
@@ -1577,6 +1577,9 @@ type ListSecurityGroupsPaginatedParams struct {
 
 // CreateSecurityGroupJSONBody defines parameters for CreateSecurityGroup.
 type CreateSecurityGroupJSONBody struct {
+	// DefaultEgress Whether to add an egress rule allowing all outbound traffic when `rules` contains no egress rule. Set it to false to create a security group that denies all outbound traffic, or only allows the egress rules given in `rules`.
+	DefaultEgress *bool `json:"default_egress,omitempty"`
+
 	// Description he human-readable description set for the security group.
 	Description *string `json:"description,omitempty"`
 
@@ -1586,7 +1589,7 @@ type CreateSecurityGroupJSONBody struct {
 	// Region The region identifier.
 	Region Region `json:"region"`
 
-	// Rules The list of rules of the security group.
+	// Rules The list of rules of the security group. If it contains no egress rule and `default_egress` is true, an egress rule allowing all outbound traffic (protocol `all`, ports 0-65535) is added.
 	Rules []SecurityGroupRule `json:"rules"`
 }
 
