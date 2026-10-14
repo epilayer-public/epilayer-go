@@ -90,7 +90,10 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 // The interface specification for the client above.
 type ClientInterface interface {
 	// GetInstancesAvailability request
-	GetInstancesAvailability(ctx context.Context, region Region, params *GetInstancesAvailabilityParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetInstancesAvailability(ctx context.Context, params *GetInstancesAvailabilityParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetInstancesAvailabilityByRegion request
+	GetInstancesAvailabilityByRegion(ctx context.Context, region string, params *GetInstancesAvailabilityByRegionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListFilesystemsPaginated request
 	ListFilesystemsPaginated(ctx context.Context, params *ListFilesystemsPaginatedParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -275,11 +278,6 @@ type ClientInterface interface {
 
 	UpdateSnapshot(ctx context.Context, snapshotId string, body UpdateSnapshotJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// CloneSnapshotWithBody request with any body
-	CloneSnapshotWithBody(ctx context.Context, snapshotId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	CloneSnapshot(ctx context.Context, snapshotId string, body CloneSnapshotJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// ListSSHKeysPaginated request
 	ListSSHKeysPaginated(ctx context.Context, params *ListSSHKeysPaginatedParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -319,8 +317,20 @@ type ClientInterface interface {
 	UpdateVolume(ctx context.Context, volumeId string, body UpdateVolumeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
-func (c *Client) GetInstancesAvailability(ctx context.Context, region Region, params *GetInstancesAvailabilityParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetInstancesAvailabilityRequest(c.Server, region, params)
+func (c *Client) GetInstancesAvailability(ctx context.Context, params *GetInstancesAvailabilityParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetInstancesAvailabilityRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetInstancesAvailabilityByRegion(ctx context.Context, region string, params *GetInstancesAvailabilityByRegionParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetInstancesAvailabilityByRegionRequest(c.Server, region, params)
 	if err != nil {
 		return nil, err
 	}
@@ -1135,30 +1145,6 @@ func (c *Client) UpdateSnapshot(ctx context.Context, snapshotId string, body Upd
 	return c.Client.Do(req)
 }
 
-func (c *Client) CloneSnapshotWithBody(ctx context.Context, snapshotId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCloneSnapshotRequestWithBody(c.Server, snapshotId, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) CloneSnapshot(ctx context.Context, snapshotId string, body CloneSnapshotJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCloneSnapshotRequest(c.Server, snapshotId, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 func (c *Client) ListSSHKeysPaginated(ctx context.Context, params *ListSSHKeysPaginatedParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListSSHKeysPaginatedRequest(c.Server, params)
 	if err != nil {
@@ -1328,7 +1314,56 @@ func (c *Client) UpdateVolume(ctx context.Context, volumeId string, body UpdateV
 }
 
 // NewGetInstancesAvailabilityRequest generates requests for GetInstancesAvailability
-func NewGetInstancesAvailabilityRequest(server string, region Region, params *GetInstancesAvailabilityParams) (*http.Request, error) {
+func NewGetInstancesAvailabilityRequest(server string, params *GetInstancesAvailabilityParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/availability/instances")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Placement != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "placement", runtime.ParamLocationQuery, *params.Placement); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetInstancesAvailabilityByRegionRequest generates requests for GetInstancesAvailabilityByRegion
+func NewGetInstancesAvailabilityByRegionRequest(server string, region string, params *GetInstancesAvailabilityByRegionParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -3546,53 +3581,6 @@ func NewUpdateSnapshotRequestWithBody(server string, snapshotId string, contentT
 	return req, nil
 }
 
-// NewCloneSnapshotRequest calls the generic CloneSnapshot builder with application/json body
-func NewCloneSnapshotRequest(server string, snapshotId string, body CloneSnapshotJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewCloneSnapshotRequestWithBody(server, snapshotId, "application/json", bodyReader)
-}
-
-// NewCloneSnapshotRequestWithBody generates requests for CloneSnapshot with any type of body
-func NewCloneSnapshotRequestWithBody(server string, snapshotId string, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "snapshot_id", runtime.ParamLocationPath, snapshotId)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/snapshots/%s/clone", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
 // NewListSSHKeysPaginatedRequest generates requests for ListSSHKeysPaginated
 func NewListSSHKeysPaginatedRequest(server string, params *ListSSHKeysPaginatedParams) (*http.Request, error) {
 	var err error
@@ -4077,7 +4065,10 @@ func WithBaseURL(baseURL string) ClientOption {
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
 	// GetInstancesAvailabilityWithResponse request
-	GetInstancesAvailabilityWithResponse(ctx context.Context, region Region, params *GetInstancesAvailabilityParams, reqEditors ...RequestEditorFn) (*GetInstancesAvailabilityResponse, error)
+	GetInstancesAvailabilityWithResponse(ctx context.Context, params *GetInstancesAvailabilityParams, reqEditors ...RequestEditorFn) (*GetInstancesAvailabilityResponse, error)
+
+	// GetInstancesAvailabilityByRegionWithResponse request
+	GetInstancesAvailabilityByRegionWithResponse(ctx context.Context, region string, params *GetInstancesAvailabilityByRegionParams, reqEditors ...RequestEditorFn) (*GetInstancesAvailabilityByRegionResponse, error)
 
 	// ListFilesystemsPaginatedWithResponse request
 	ListFilesystemsPaginatedWithResponse(ctx context.Context, params *ListFilesystemsPaginatedParams, reqEditors ...RequestEditorFn) (*ListFilesystemsPaginatedResponse, error)
@@ -4262,11 +4253,6 @@ type ClientWithResponsesInterface interface {
 
 	UpdateSnapshotWithResponse(ctx context.Context, snapshotId string, body UpdateSnapshotJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateSnapshotResponse, error)
 
-	// CloneSnapshotWithBodyWithResponse request with any body
-	CloneSnapshotWithBodyWithResponse(ctx context.Context, snapshotId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CloneSnapshotResponse, error)
-
-	CloneSnapshotWithResponse(ctx context.Context, snapshotId string, body CloneSnapshotJSONRequestBody, reqEditors ...RequestEditorFn) (*CloneSnapshotResponse, error)
-
 	// ListSSHKeysPaginatedWithResponse request
 	ListSSHKeysPaginatedWithResponse(ctx context.Context, params *ListSSHKeysPaginatedParams, reqEditors ...RequestEditorFn) (*ListSSHKeysPaginatedResponse, error)
 
@@ -4323,6 +4309,29 @@ func (r GetInstancesAvailabilityResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r GetInstancesAvailabilityResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetInstancesAvailabilityByRegionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *InstancesAvailabilityResponse
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetInstancesAvailabilityByRegionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetInstancesAvailabilityByRegionResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -4470,6 +4479,7 @@ type CreateFloatingIPResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON201      *SingleFloatingIPResponse
+	JSON403      *QuotaExceeded
 	JSONDefault  *ErrorResponse
 }
 
@@ -4607,6 +4617,7 @@ type CreateInstanceResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON201      *SingleInstanceResponse
+	JSON403      *QuotaExceeded
 	JSONDefault  *ErrorResponse
 }
 
@@ -4720,6 +4731,7 @@ func (r GetInstanceActionsResponse) StatusCode() int {
 type PerformInstanceActionResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	JSON403      *QuotaExceeded
 	JSONDefault  *ErrorResponse
 }
 
@@ -4766,6 +4778,7 @@ type CreateInstanceSnapshotResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON201      *SingleSnapshotResponse
+	JSON403      *QuotaExceeded
 	JSONDefault  *ErrorResponse
 }
 
@@ -4835,6 +4848,7 @@ type CreateKubernetesClusterResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON201      *KubernetesClusterCreatedResponse
+	JSON403      *QuotaExceeded
 	JSONDefault  *ErrorResponse
 }
 
@@ -4972,6 +4986,7 @@ type CreateLoadbalancerResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON201      *SingleLoadbalancerResponse
+	JSON403      *QuotaExceeded
 	JSONDefault  *ErrorResponse
 }
 
@@ -5360,6 +5375,7 @@ type CreateSnapshotResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON201      *SingleSnapshotResponse
+	JSON403      *QuotaExceeded
 	JSONDefault  *ErrorResponse
 }
 
@@ -5441,29 +5457,6 @@ func (r UpdateSnapshotResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r UpdateSnapshotResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type CloneSnapshotResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON201      *SingleSnapshotResponse
-	JSONDefault  *ErrorResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r CloneSnapshotResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r CloneSnapshotResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -5611,6 +5604,7 @@ type CreateVolumeResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON201      *SingleVolumeResponse
+	JSON403      *QuotaExceeded
 	JSONDefault  *ErrorResponse
 }
 
@@ -5679,6 +5673,7 @@ type UpdateVolumeResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *SingleVolumeResponse
+	JSON403      *QuotaExceeded
 	JSONDefault  *ErrorResponse
 }
 
@@ -5699,12 +5694,21 @@ func (r UpdateVolumeResponse) StatusCode() int {
 }
 
 // GetInstancesAvailabilityWithResponse request returning *GetInstancesAvailabilityResponse
-func (c *ClientWithResponses) GetInstancesAvailabilityWithResponse(ctx context.Context, region Region, params *GetInstancesAvailabilityParams, reqEditors ...RequestEditorFn) (*GetInstancesAvailabilityResponse, error) {
-	rsp, err := c.GetInstancesAvailability(ctx, region, params, reqEditors...)
+func (c *ClientWithResponses) GetInstancesAvailabilityWithResponse(ctx context.Context, params *GetInstancesAvailabilityParams, reqEditors ...RequestEditorFn) (*GetInstancesAvailabilityResponse, error) {
+	rsp, err := c.GetInstancesAvailability(ctx, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseGetInstancesAvailabilityResponse(rsp)
+}
+
+// GetInstancesAvailabilityByRegionWithResponse request returning *GetInstancesAvailabilityByRegionResponse
+func (c *ClientWithResponses) GetInstancesAvailabilityByRegionWithResponse(ctx context.Context, region string, params *GetInstancesAvailabilityByRegionParams, reqEditors ...RequestEditorFn) (*GetInstancesAvailabilityByRegionResponse, error) {
+	rsp, err := c.GetInstancesAvailabilityByRegion(ctx, region, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetInstancesAvailabilityByRegionResponse(rsp)
 }
 
 // ListFilesystemsPaginatedWithResponse request returning *ListFilesystemsPaginatedResponse
@@ -6292,23 +6296,6 @@ func (c *ClientWithResponses) UpdateSnapshotWithResponse(ctx context.Context, sn
 	return ParseUpdateSnapshotResponse(rsp)
 }
 
-// CloneSnapshotWithBodyWithResponse request with arbitrary body returning *CloneSnapshotResponse
-func (c *ClientWithResponses) CloneSnapshotWithBodyWithResponse(ctx context.Context, snapshotId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CloneSnapshotResponse, error) {
-	rsp, err := c.CloneSnapshotWithBody(ctx, snapshotId, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseCloneSnapshotResponse(rsp)
-}
-
-func (c *ClientWithResponses) CloneSnapshotWithResponse(ctx context.Context, snapshotId string, body CloneSnapshotJSONRequestBody, reqEditors ...RequestEditorFn) (*CloneSnapshotResponse, error) {
-	rsp, err := c.CloneSnapshot(ctx, snapshotId, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseCloneSnapshotResponse(rsp)
-}
-
 // ListSSHKeysPaginatedWithResponse request returning *ListSSHKeysPaginatedResponse
 func (c *ClientWithResponses) ListSSHKeysPaginatedWithResponse(ctx context.Context, params *ListSSHKeysPaginatedParams, reqEditors ...RequestEditorFn) (*ListSSHKeysPaginatedResponse, error) {
 	rsp, err := c.ListSSHKeysPaginated(ctx, params, reqEditors...)
@@ -6440,6 +6427,39 @@ func ParseGetInstancesAvailabilityResponse(rsp *http.Response) (*GetInstancesAva
 	}
 
 	response := &GetInstancesAvailabilityResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest InstancesAvailabilityResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetInstancesAvailabilityByRegionResponse parses an HTTP response from a GetInstancesAvailabilityByRegionWithResponse call
+func ParseGetInstancesAvailabilityByRegionResponse(rsp *http.Response) (*GetInstancesAvailabilityByRegionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetInstancesAvailabilityByRegionResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -6676,6 +6696,13 @@ func ParseCreateFloatingIPResponse(rsp *http.Response) (*CreateFloatingIPRespons
 		}
 		response.JSON201 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest QuotaExceeded
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -6867,6 +6894,13 @@ func ParseCreateInstanceResponse(rsp *http.Response) (*CreateInstanceResponse, e
 		}
 		response.JSON201 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest QuotaExceeded
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -7018,6 +7052,13 @@ func ParsePerformInstanceActionResponse(rsp *http.Response) (*PerformInstanceAct
 	}
 
 	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest QuotaExceeded
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -7083,6 +7124,13 @@ func ParseCreateInstanceSnapshotResponse(rsp *http.Response) (*CreateInstanceSna
 			return nil, err
 		}
 		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest QuotaExceeded
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
 		var dest ErrorResponse
@@ -7182,6 +7230,13 @@ func ParseCreateKubernetesClusterResponse(rsp *http.Response) (*CreateKubernetes
 			return nil, err
 		}
 		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest QuotaExceeded
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
 		var dest ErrorResponse
@@ -7373,6 +7428,13 @@ func ParseCreateLoadbalancerResponse(rsp *http.Response) (*CreateLoadbalancerRes
 			return nil, err
 		}
 		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest QuotaExceeded
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
 		var dest ErrorResponse
@@ -7914,6 +7976,13 @@ func ParseCreateSnapshotResponse(rsp *http.Response) (*CreateSnapshotResponse, e
 		}
 		response.JSON201 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest QuotaExceeded
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -8005,39 +8074,6 @@ func ParseUpdateSnapshotResponse(rsp *http.Response) (*UpdateSnapshotResponse, e
 			return nil, err
 		}
 		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSONDefault = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseCloneSnapshotResponse parses an HTTP response from a CloneSnapshotWithResponse call
-func ParseCloneSnapshotResponse(rsp *http.Response) (*CloneSnapshotResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &CloneSnapshotResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
-		var dest SingleSnapshotResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON201 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
 		var dest ErrorResponse
@@ -8263,6 +8299,13 @@ func ParseCreateVolumeResponse(rsp *http.Response) (*CreateVolumeResponse, error
 		}
 		response.JSON201 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest QuotaExceeded
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -8354,6 +8397,13 @@ func ParseUpdateVolumeResponse(rsp *http.Response) (*UpdateVolumeResponse, error
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest QuotaExceeded
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
 		var dest ErrorResponse

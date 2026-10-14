@@ -212,22 +212,10 @@ var AllPrivateNetworkStatuss = []PrivateNetworkStatus{
 
 // Defines values for Region.
 const (
-	RegionEUCDEMUC1  Region = "EUC-DE-MUC-1"
-	RegionEUWGBMNC1  Region = "EUW-GB-MNC-1"
-	RegionEUWNLAMS1  Region = "EUW-NL-AMS-1"
-	RegionNACAFTS1   Region = "NA-CA-FTS-1"
-	RegionNACAMNZ1   Region = "NA-CA-MNZ-1"
-	RegionNACAPRG1   Region = "NA-CA-PRG-1"
 	RegionNORDNOKRS1 Region = "NORD-NO-KRS-1"
 )
 
 var AllRegions = []Region{
-	RegionEUCDEMUC1,
-	RegionEUWGBMNC1,
-	RegionEUWNLAMS1,
-	RegionNACAFTS1,
-	RegionNACAMNZ1,
-	RegionNACAPRG1,
 	RegionNORDNOKRS1,
 }
 
@@ -371,7 +359,8 @@ type Filesystem struct {
 	// Name The human-readable name for the filesystem.
 	Name string `json:"name"`
 
-	// Region The region identifier.
+	// Region The legacy region identifier.
+	// Deprecated: The Region follows from the API endpoint.
 	Region Region `json:"region"`
 
 	// Size The storage size of this filesystem given in GiB.
@@ -418,7 +407,8 @@ type FloatingIP struct {
 	// Name The human-readable name for the floating IP.
 	Name string `json:"name"`
 
-	// Region The region identifier.
+	// Region The legacy region identifier.
+	// Deprecated: The Region follows from the API endpoint.
 	Region Region `json:"region"`
 
 	// Status The floating ip status.
@@ -449,7 +439,8 @@ type Image struct {
 	// OsType The OS type.
 	OsType OSType `json:"os_type"`
 
-	// Regions The list of regions in which this image can be used in.
+	// Regions The legacy region identifier.
+	// Deprecated: The Region follows from the API endpoint.
 	Regions []Region `json:"regions"`
 	Slug    *string  `json:"slug"`
 
@@ -529,7 +520,8 @@ type Instance struct {
 	// PublicIp The public IPv4 IP-Address (IPv4 address).
 	PublicIp *string `json:"public_ip"`
 
-	// Region The region identifier.
+	// Region The legacy region identifier.
+	// Deprecated: The Region follows from the API endpoint.
 	Region Region `json:"region"`
 
 	// ReservationId The unique ID of the reservation the instance is associated with.
@@ -691,7 +683,8 @@ type InstancesAvailability struct {
 		} `json:"instance_types"`
 		Placement *string `json:"placement,omitempty"`
 
-		// Region The region identifier.
+		// Region The legacy region identifier.
+		// Deprecated: The Region follows from the API endpoint.
 		Region Region `json:"region"`
 		Type   string `json:"type"`
 	} `json:"availability"`
@@ -761,7 +754,8 @@ type Loadbalancer struct {
 	// Ports List of port mappings for the load balancer.
 	Ports []LoadbalancerPort `json:"ports"`
 
-	// Region The region identifier.
+	// Region The legacy region identifier.
+	// Deprecated: The Region follows from the API endpoint.
 	Region Region `json:"region"`
 
 	// Status The load balancer status.
@@ -814,7 +808,8 @@ type PrivateNetwork struct {
 	// Name The human-readable name for the private network.
 	Name string `json:"name"`
 
-	// Region The region identifier.
+	// Region The legacy region identifier.
+	// Deprecated: The Region follows from the API endpoint.
 	Region Region `json:"region"`
 
 	// Status The private network status.
@@ -830,18 +825,56 @@ type PrivateNetworkId = string
 
 // Quota defines model for Quota.
 type Quota struct {
+	// Capacity The project's limit for this key. `-1` means unlimited.
 	Capacity int `json:"capacity"`
-	Flavors  []struct {
+
+	// Flavors The flavors currently drawing on this key and how much each uses. Recomputed
+	// periodically, so it can briefly lag the key's `used`.
+	Flavors []struct {
+		// FlavorName The instance type for compute keys (e.g. `vcpu-4_memory-8g`), the storage class
+		// for storage keys, or the kind of consumer (`ephemeral`, `floating`,
+		// `load-balancer`, `kubernetes`) for the rest.
 		FlavorName  string `json:"flavor_name"`
 		ProductName string `json:"product_name"`
 		Unit        string `json:"unit"`
 		Used        int    `json:"used"`
 	} `json:"flavors"`
-	Key  string `json:"key"`
-	Used int    `json:"used"`
+
+	// Key The quota key, e.g. `cpu-dedicated`, `gpu-nvidia-h100-sxm5`, `volumes-ssd`, `ipv4`, `s3-storage` (bytes).
+	// Over-quota errors name the same key.
+	Key string `json:"key"`
+
+	// Used How much of the limit is currently in use.
+	Used int `json:"used"`
 }
 
-// Region The region identifier.
+// QuotaExceededError defines model for QuotaExceededError.
+type QuotaExceededError struct {
+	// Code The EpiLayer error code.
+	// Check the [developer documentation](https://developers.com/#error-codes) for more information on error codes.
+	Code string `json:"code"`
+
+	// Message An explanation of what went wrong.
+	Message string `json:"message"`
+	Quota   struct {
+		// Key The quota key that would be exceeded, as listed by GET /quotas.
+		Key string `json:"key"`
+
+		// Limit The project's limit for this key.
+		Limit int `json:"limit"`
+
+		// Requested How much the rejected request asked for.
+		Requested int `json:"requested"`
+
+		// Used How much of the limit is already in use.
+		Used int `json:"used"`
+	} `json:"quota"`
+
+	// TraceId OpenTelemetry trace ID for locating this request in Jaeger.
+	TraceId *string `json:"trace_id"`
+}
+
+// Region The legacy region identifier. Deprecated, the Region follows from the API endpoint.
 type Region string
 
 // Reservation defines model for Reservation.
@@ -854,7 +887,8 @@ type Reservation struct {
 		Used     int `json:"used"`
 	} `json:"quota"`
 
-	// Region The region identifier.
+	// Region The legacy region identifier.
+	// Deprecated: The Region follows from the API endpoint.
 	Region Region `json:"region"`
 }
 
@@ -896,7 +930,8 @@ type SecurityGroup struct {
 	// Name The human-readable name for the security group.
 	Name string `json:"name"`
 
-	// Region The region identifier.
+	// Region The legacy region identifier.
+	// Deprecated: The Region follows from the API endpoint.
 	Region Region              `json:"region"`
 	Rules  []SecurityGroupRule `json:"rules"`
 
@@ -945,10 +980,13 @@ type Snapshot struct {
 	// OsType The OS type.
 	OsType OSType `json:"os_type"`
 
-	// Region The region identifier.
+	// Region The legacy region identifier.
+	// Deprecated: The Region follows from the API endpoint.
 	Region Region `json:"region"`
 
-	// Size The storage size of this snapshot given in GiB.
+	// Size The storage size of this snapshot given in GiB: the provisioned size of the source
+	// volume at the moment the snapshot was taken. This is what counts against the
+	// `snapshots-ssd` / `snapshots-hdd` quota.
 	Size int `json:"size"`
 
 	// SourceInstanceId The id of the source instance from which this snapshot was derived.
@@ -990,7 +1028,8 @@ type Volume struct {
 	// Name The human-readable name for the volume.
 	Name string `json:"name"`
 
-	// Region The region identifier.
+	// Region The legacy region identifier.
+	// Deprecated: The Region follows from the API endpoint.
 	Region Region `json:"region"`
 
 	// Size The storage size of this volume given in GiB.
@@ -1172,6 +1211,10 @@ type PaginatedVolumesResponse struct {
 	Volumes    []Volume `json:"volumes"`
 }
 
+// QuotaExceeded Returned with HTTP 403 when a request would take the project over one of its quota limits.
+// `code` is always `quota_exceeded`; `quota` says which limit was hit.
+type QuotaExceeded = QuotaExceededError
+
 // QuotasResponse defines model for QuotasResponse.
 type QuotasResponse struct {
 	Quotas []Quota `json:"quotas"`
@@ -1235,6 +1278,11 @@ type GetInstancesAvailabilityParams struct {
 	Placement *string `form:"placement,omitempty" json:"placement,omitempty"`
 }
 
+// GetInstancesAvailabilityByRegionParams defines parameters for GetInstancesAvailabilityByRegion.
+type GetInstancesAvailabilityByRegionParams struct {
+	Placement *string `form:"placement,omitempty" json:"placement,omitempty"`
+}
+
 // ListFilesystemsPaginatedParams defines parameters for ListFilesystemsPaginated.
 type ListFilesystemsPaginatedParams struct {
 	Page    *PageQueryParameter    `form:"page,omitempty" json:"page,omitempty"`
@@ -1249,8 +1297,9 @@ type CreateFilesystemJSONBody struct {
 	// Name The human-readable name set for the filesystem.
 	Name string `json:"name"`
 
-	// Region The region identifier.
-	Region Region `json:"region"`
+	// Region Deprecated and ignored. The Region follows from the API endpoint.
+	// Deprecated: The Region follows from the API endpoint.
+	Region *Region `json:"region,omitempty"`
 
 	// Size The storage size of this filesystem given in GiB (min: 1GiB).
 	Size int `json:"size"`
@@ -1285,8 +1334,9 @@ type CreateFloatingIPJSONBody struct {
 	// Name The human-readable name set for the floating IP.
 	Name string `json:"name"`
 
-	// Region The region identifier.
-	Region Region `json:"region"`
+	// Region Deprecated and ignored. The Region follows from the API endpoint.
+	// Deprecated: The Region follows from the API endpoint.
+	Region *Region `json:"region,omitempty"`
 
 	// Version The IP version of the floating IP.
 	Version *CreateFloatingIPJSONBodyVersion `json:"version,omitempty"`
@@ -1380,8 +1430,9 @@ type CreateInstanceJSONBody struct {
 	// PublicIpv6 A boolean value indicating whether the instance should have an ipv6 address or not.
 	PublicIpv6 *InstancePublicIpv6 `json:"public_ipv6,omitempty"`
 
-	// Region The region identifier.
-	Region Region `json:"region"`
+	// Region Deprecated and ignored. The Region follows from the API endpoint.
+	// Deprecated: The Region follows from the API endpoint.
+	Region *Region `json:"region,omitempty"`
 
 	// ReservationId The unique ID of the reservation the instance is associated with.
 	ReservationId *string `json:"reservation_id,omitempty"`
@@ -1444,9 +1495,6 @@ type ListInstanceSnapshotsPaginatedParams struct {
 type CreateInstanceSnapshotJSONBody struct {
 	// Name Name of the snapshot.
 	Name string `json:"name"`
-
-	// ReplicatedRegion The region identifier.
-	ReplicatedRegion *Region `json:"replicated_region,omitempty"`
 }
 
 // ListKubernetesClustersParams defines parameters for ListKubernetesClusters.
@@ -1510,8 +1558,9 @@ type CreateLoadbalancerJSONBody struct {
 	// Ports List of port mappings for the load balancer.
 	Ports []LoadbalancerPort `json:"ports"`
 
-	// Region The region identifier.
-	Region Region `json:"region"`
+	// Region Deprecated and ignored. The Region follows from the API endpoint.
+	// Deprecated: The Region follows from the API endpoint.
+	Region *Region `json:"region,omitempty"`
 }
 
 // CreateLoadbalancerJSONBodyHealthCheckProtocol defines parameters for CreateLoadbalancer.
@@ -1556,8 +1605,9 @@ type CreatePrivateNetworkJSONBody struct {
 	// Name The human-readable name set for the private network.
 	Name string `json:"name"`
 
-	// Region The region identifier.
-	Region Region `json:"region"`
+	// Region Deprecated and ignored. The Region follows from the API endpoint.
+	// Deprecated: The Region follows from the API endpoint.
+	Region *Region `json:"region,omitempty"`
 }
 
 // UpdatePrivateNetworkJSONBody defines parameters for UpdatePrivateNetwork.
@@ -1586,8 +1636,9 @@ type CreateSecurityGroupJSONBody struct {
 	// Name The human-readable name set for the security group. **Please Note**: `default` and `standard` are not allowed names (reserved words).
 	Name string `json:"name"`
 
-	// Region The region identifier.
-	Region Region `json:"region"`
+	// Region Deprecated and ignored. The Region follows from the API endpoint.
+	// Deprecated: The Region follows from the API endpoint.
+	Region *Region `json:"region,omitempty"`
 
 	// Rules The list of rules of the security group. If it contains no egress rule and `default_egress` is true, an egress rule allowing all outbound traffic (protocol `all`, ports 0-65535) is added.
 	Rules []SecurityGroupRule `json:"rules"`
@@ -1619,8 +1670,9 @@ type CreateSnapshotJSONBody struct {
 	// OsType The OS type.
 	OsType *OSType `json:"os_type,omitempty"`
 
-	// Region The region identifier.
-	Region Region `json:"region"`
+	// Region Deprecated and ignored. The Region follows from the API endpoint.
+	// Deprecated: The Region follows from the API endpoint.
+	Region *Region `json:"region,omitempty"`
 
 	// Size The storage size of this snapshot given in GiB (min: 1GiB).
 	Size int `json:"size"`
@@ -1633,15 +1685,6 @@ type CreateSnapshotJSONBody struct {
 type UpdateSnapshotJSONBody struct {
 	// Name The new human-readable name for your snapshot.
 	Name *string `json:"name,omitempty"`
-}
-
-// CloneSnapshotJSONBody defines parameters for CloneSnapshot.
-type CloneSnapshotJSONBody struct {
-	// Name The human-readable name set for the clone of the snapshot.
-	Name string `json:"name"`
-
-	// Region The region identifier.
-	Region Region `json:"region"`
 }
 
 // ListSSHKeysPaginatedParams defines parameters for ListSSHKeysPaginated.
@@ -1679,8 +1722,9 @@ type CreateVolumeJSONBody struct {
 	// Name The human-readable name set for the volume.
 	Name string `json:"name"`
 
-	// Region The region identifier.
-	Region Region `json:"region"`
+	// Region Deprecated and ignored. The Region follows from the API endpoint.
+	// Deprecated: The Region follows from the API endpoint.
+	Region *Region `json:"region,omitempty"`
 
 	// Size The storage size of this volume given in GiB (min: 1GiB).
 	Size int `json:"size"`
@@ -1754,9 +1798,6 @@ type CreateSnapshotJSONRequestBody CreateSnapshotJSONBody
 
 // UpdateSnapshotJSONRequestBody defines body for UpdateSnapshot for application/json ContentType.
 type UpdateSnapshotJSONRequestBody UpdateSnapshotJSONBody
-
-// CloneSnapshotJSONRequestBody defines body for CloneSnapshot for application/json ContentType.
-type CloneSnapshotJSONRequestBody CloneSnapshotJSONBody
 
 // CreateSSHKeyJSONRequestBody defines body for CreateSSHKey for application/json ContentType.
 type CreateSSHKeyJSONRequestBody CreateSSHKeyJSONBody
