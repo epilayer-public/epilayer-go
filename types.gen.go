@@ -428,7 +428,9 @@ type FloatingIpStatus string
 // Image defines model for Image.
 type Image struct {
 	CreatedAt Timestamp `json:"created_at"`
-	Family    *string   `json:"family"`
+
+	// Family The upstream source the image was imported from, e.g. `debian`. Null if the image has no recorded provenance.
+	Family *string `json:"family"`
 
 	// Id A unique number that can be used to identify and reference a specific image.
 	Id ImageId `json:"id"`
@@ -439,6 +441,9 @@ type Image struct {
 	// OsType The OS type.
 	OsType OSType `json:"os_type"`
 
+	// RawSha256 The sha256 of the image contents after converting the upstream file to raw with `qemu-img convert -O raw` (after decompressing it, if it is compressed). The image is otherwise unmodified upstream content, so downloading `upstream_url`, checking it against `upstream_checksum`, converting it the same way and hashing the result reproduces this value. Null if unknown.
+	RawSha256 *string `json:"raw_sha256"`
+
 	// Regions The legacy region identifier.
 	// Deprecated: The Region follows from the API endpoint.
 	Regions []Region `json:"regions"`
@@ -448,7 +453,13 @@ type Image struct {
 	Type      ImageType `json:"type"`
 	UpdatedAt Timestamp `json:"updated_at"`
 
-	// Versions The list of versions if this is a cloud-image otherwise empty.
+	// UpstreamChecksum The checksum the upstream publishes for the file at `upstream_url`, as `<algorithm>:<hex>` (e.g. `sha512:...`). Null if unknown.
+	UpstreamChecksum *string `json:"upstream_checksum"`
+
+	// UpstreamUrl The upstream URL the image was downloaded from. Null if the image has no recorded provenance.
+	UpstreamUrl *string `json:"upstream_url"`
+
+	// Versions The upstream release line the image belongs to, e.g. `["debian-13"]`. Null if the image has no recorded provenance.
 	Versions *[]string `json:"versions"`
 }
 
