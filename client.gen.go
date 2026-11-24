@@ -196,6 +196,25 @@ type ClientInterface interface {
 	// GetKubernetesClusterCredentials request
 	GetKubernetesClusterCredentials(ctx context.Context, clusterId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListNodePools request
+	ListNodePools(ctx context.Context, clusterId string, params *ListNodePoolsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateNodePoolWithBody request with any body
+	CreateNodePoolWithBody(ctx context.Context, clusterId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CreateNodePool(ctx context.Context, clusterId string, body CreateNodePoolJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteNodePool request
+	DeleteNodePool(ctx context.Context, clusterId string, nodePoolId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetNodePool request
+	GetNodePool(ctx context.Context, clusterId string, nodePoolId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateNodePoolWithBody request with any body
+	UpdateNodePoolWithBody(ctx context.Context, clusterId string, nodePoolId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	UpdateNodePool(ctx context.Context, clusterId string, nodePoolId string, body UpdateNodePoolJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListLoadbalancers request
 	ListLoadbalancers(ctx context.Context, params *ListLoadbalancersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -236,6 +255,27 @@ type ClientInterface interface {
 
 	// GetQuotas request
 	GetQuotas(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DisableRegistry request
+	DisableRegistry(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetRegistry request
+	GetRegistry(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// EnableRegistry request
+	EnableRegistry(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListRegistryRepositories request
+	ListRegistryRepositories(ctx context.Context, params *ListRegistryRepositoriesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteRegistryManifest request
+	DeleteRegistryManifest(ctx context.Context, repository string, digest string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListRegistryTags request
+	ListRegistryTags(ctx context.Context, repository string, params *ListRegistryTagsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteRegistryTag request
+	DeleteRegistryTag(ctx context.Context, repository string, tag string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetReservations request
 	GetReservations(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -785,6 +825,90 @@ func (c *Client) GetKubernetesClusterCredentials(ctx context.Context, clusterId 
 	return c.Client.Do(req)
 }
 
+func (c *Client) ListNodePools(ctx context.Context, clusterId string, params *ListNodePoolsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListNodePoolsRequest(c.Server, clusterId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateNodePoolWithBody(ctx context.Context, clusterId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateNodePoolRequestWithBody(c.Server, clusterId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateNodePool(ctx context.Context, clusterId string, body CreateNodePoolJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateNodePoolRequest(c.Server, clusterId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteNodePool(ctx context.Context, clusterId string, nodePoolId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteNodePoolRequest(c.Server, clusterId, nodePoolId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetNodePool(ctx context.Context, clusterId string, nodePoolId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetNodePoolRequest(c.Server, clusterId, nodePoolId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateNodePoolWithBody(ctx context.Context, clusterId string, nodePoolId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateNodePoolRequestWithBody(c.Server, clusterId, nodePoolId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateNodePool(ctx context.Context, clusterId string, nodePoolId string, body UpdateNodePoolJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateNodePoolRequest(c.Server, clusterId, nodePoolId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) ListLoadbalancers(ctx context.Context, params *ListLoadbalancersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListLoadbalancersRequest(c.Server, params)
 	if err != nil {
@@ -955,6 +1079,90 @@ func (c *Client) UpdatePrivateNetwork(ctx context.Context, networkId string, bod
 
 func (c *Client) GetQuotas(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetQuotasRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DisableRegistry(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDisableRegistryRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetRegistry(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetRegistryRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) EnableRegistry(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewEnableRegistryRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListRegistryRepositories(ctx context.Context, params *ListRegistryRepositoriesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListRegistryRepositoriesRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteRegistryManifest(ctx context.Context, repository string, digest string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteRegistryManifestRequest(c.Server, repository, digest)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListRegistryTags(ctx context.Context, repository string, params *ListRegistryTagsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListRegistryTagsRequest(c.Server, repository, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteRegistryTag(ctx context.Context, repository string, tag string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteRegistryTagRequest(c.Server, repository, tag)
 	if err != nil {
 		return nil, err
 	}
@@ -2647,6 +2855,261 @@ func NewGetKubernetesClusterCredentialsRequest(server string, clusterId string) 
 	return req, nil
 }
 
+// NewListNodePoolsRequest generates requests for ListNodePools
+func NewListNodePoolsRequest(server string, clusterId string, params *ListNodePoolsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "cluster_id", runtime.ParamLocationPath, clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/kubernetes-clusters/%s/node-pools", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Page != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "page", runtime.ParamLocationQuery, *params.Page); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.PerPage != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "per_page", runtime.ParamLocationQuery, *params.PerPage); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateNodePoolRequest calls the generic CreateNodePool builder with application/json body
+func NewCreateNodePoolRequest(server string, clusterId string, body CreateNodePoolJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateNodePoolRequestWithBody(server, clusterId, "application/json", bodyReader)
+}
+
+// NewCreateNodePoolRequestWithBody generates requests for CreateNodePool with any type of body
+func NewCreateNodePoolRequestWithBody(server string, clusterId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "cluster_id", runtime.ParamLocationPath, clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/kubernetes-clusters/%s/node-pools", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteNodePoolRequest generates requests for DeleteNodePool
+func NewDeleteNodePoolRequest(server string, clusterId string, nodePoolId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "cluster_id", runtime.ParamLocationPath, clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "node_pool_id", runtime.ParamLocationPath, nodePoolId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/kubernetes-clusters/%s/node-pools/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetNodePoolRequest generates requests for GetNodePool
+func NewGetNodePoolRequest(server string, clusterId string, nodePoolId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "cluster_id", runtime.ParamLocationPath, clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "node_pool_id", runtime.ParamLocationPath, nodePoolId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/kubernetes-clusters/%s/node-pools/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateNodePoolRequest calls the generic UpdateNodePool builder with application/json body
+func NewUpdateNodePoolRequest(server string, clusterId string, nodePoolId string, body UpdateNodePoolJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateNodePoolRequestWithBody(server, clusterId, nodePoolId, "application/json", bodyReader)
+}
+
+// NewUpdateNodePoolRequestWithBody generates requests for UpdateNodePool with any type of body
+func NewUpdateNodePoolRequestWithBody(server string, clusterId string, nodePoolId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "cluster_id", runtime.ParamLocationPath, clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "node_pool_id", runtime.ParamLocationPath, nodePoolId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/kubernetes-clusters/%s/node-pools/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PATCH", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewListLoadbalancersRequest generates requests for ListLoadbalancers
 func NewListLoadbalancersRequest(server string, params *ListLoadbalancersParams) (*http.Request, error) {
 	var err error
@@ -3107,6 +3570,306 @@ func NewGetQuotasRequest(server string) (*http.Request, error) {
 	}
 
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewDisableRegistryRequest generates requests for DisableRegistry
+func NewDisableRegistryRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/registry")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetRegistryRequest generates requests for GetRegistry
+func NewGetRegistryRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/registry")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewEnableRegistryRequest generates requests for EnableRegistry
+func NewEnableRegistryRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/registry")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListRegistryRepositoriesRequest generates requests for ListRegistryRepositories
+func NewListRegistryRepositoriesRequest(server string, params *ListRegistryRepositoriesParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/registry/repositories")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "limit", runtime.ParamLocationQuery, *params.Limit); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Last != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "last", runtime.ParamLocationQuery, *params.Last); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewDeleteRegistryManifestRequest generates requests for DeleteRegistryManifest
+func NewDeleteRegistryManifestRequest(server string, repository string, digest string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "repository", runtime.ParamLocationPath, repository)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "digest", runtime.ParamLocationPath, digest)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/registry/repositories/%s/manifests/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListRegistryTagsRequest generates requests for ListRegistryTags
+func NewListRegistryTagsRequest(server string, repository string, params *ListRegistryTagsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "repository", runtime.ParamLocationPath, repository)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/registry/repositories/%s/tags", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "limit", runtime.ParamLocationQuery, *params.Limit); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Last != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "last", runtime.ParamLocationQuery, *params.Last); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewDeleteRegistryTagRequest generates requests for DeleteRegistryTag
+func NewDeleteRegistryTagRequest(server string, repository string, tag string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "repository", runtime.ParamLocationPath, repository)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "tag", runtime.ParamLocationPath, tag)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/registry/repositories/%s/tags/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -4171,6 +4934,25 @@ type ClientWithResponsesInterface interface {
 	// GetKubernetesClusterCredentialsWithResponse request
 	GetKubernetesClusterCredentialsWithResponse(ctx context.Context, clusterId string, reqEditors ...RequestEditorFn) (*GetKubernetesClusterCredentialsResponse, error)
 
+	// ListNodePoolsWithResponse request
+	ListNodePoolsWithResponse(ctx context.Context, clusterId string, params *ListNodePoolsParams, reqEditors ...RequestEditorFn) (*ListNodePoolsResponse, error)
+
+	// CreateNodePoolWithBodyWithResponse request with any body
+	CreateNodePoolWithBodyWithResponse(ctx context.Context, clusterId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateNodePoolResponse, error)
+
+	CreateNodePoolWithResponse(ctx context.Context, clusterId string, body CreateNodePoolJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateNodePoolResponse, error)
+
+	// DeleteNodePoolWithResponse request
+	DeleteNodePoolWithResponse(ctx context.Context, clusterId string, nodePoolId string, reqEditors ...RequestEditorFn) (*DeleteNodePoolResponse, error)
+
+	// GetNodePoolWithResponse request
+	GetNodePoolWithResponse(ctx context.Context, clusterId string, nodePoolId string, reqEditors ...RequestEditorFn) (*GetNodePoolResponse, error)
+
+	// UpdateNodePoolWithBodyWithResponse request with any body
+	UpdateNodePoolWithBodyWithResponse(ctx context.Context, clusterId string, nodePoolId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateNodePoolResponse, error)
+
+	UpdateNodePoolWithResponse(ctx context.Context, clusterId string, nodePoolId string, body UpdateNodePoolJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateNodePoolResponse, error)
+
 	// ListLoadbalancersWithResponse request
 	ListLoadbalancersWithResponse(ctx context.Context, params *ListLoadbalancersParams, reqEditors ...RequestEditorFn) (*ListLoadbalancersResponse, error)
 
@@ -4211,6 +4993,27 @@ type ClientWithResponsesInterface interface {
 
 	// GetQuotasWithResponse request
 	GetQuotasWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetQuotasResponse, error)
+
+	// DisableRegistryWithResponse request
+	DisableRegistryWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*DisableRegistryResponse, error)
+
+	// GetRegistryWithResponse request
+	GetRegistryWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetRegistryResponse, error)
+
+	// EnableRegistryWithResponse request
+	EnableRegistryWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*EnableRegistryResponse, error)
+
+	// ListRegistryRepositoriesWithResponse request
+	ListRegistryRepositoriesWithResponse(ctx context.Context, params *ListRegistryRepositoriesParams, reqEditors ...RequestEditorFn) (*ListRegistryRepositoriesResponse, error)
+
+	// DeleteRegistryManifestWithResponse request
+	DeleteRegistryManifestWithResponse(ctx context.Context, repository string, digest string, reqEditors ...RequestEditorFn) (*DeleteRegistryManifestResponse, error)
+
+	// ListRegistryTagsWithResponse request
+	ListRegistryTagsWithResponse(ctx context.Context, repository string, params *ListRegistryTagsParams, reqEditors ...RequestEditorFn) (*ListRegistryTagsResponse, error)
+
+	// DeleteRegistryTagWithResponse request
+	DeleteRegistryTagWithResponse(ctx context.Context, repository string, tag string, reqEditors ...RequestEditorFn) (*DeleteRegistryTagResponse, error)
 
 	// GetReservationsWithResponse request
 	GetReservationsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetReservationsResponse, error)
@@ -4686,6 +5489,7 @@ type UpdateInstanceResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *SingleInstanceResponse
+	JSON403      *QuotaExceeded
 	JSONDefault  *ErrorResponse
 }
 
@@ -4959,6 +5763,122 @@ func (r GetKubernetesClusterCredentialsResponse) StatusCode() int {
 	return 0
 }
 
+type ListNodePoolsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *PaginatedNodePoolsResponse
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListNodePoolsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListNodePoolsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateNodePoolResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *SingleNodePoolResponse
+	JSON403      *QuotaExceeded
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateNodePoolResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateNodePoolResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteNodePoolResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteNodePoolResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteNodePoolResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetNodePoolResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *SingleNodePoolResponse
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetNodePoolResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetNodePoolResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UpdateNodePoolResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *SingleNodePoolResponse
+	JSON403      *QuotaExceeded
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateNodePoolResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateNodePoolResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type ListLoadbalancersResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -5205,6 +6125,175 @@ func (r GetQuotasResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r GetQuotasResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DisableRegistryResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DisableRegistryResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DisableRegistryResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetRegistryResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *SingleRegistryResponse
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetRegistryResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetRegistryResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type EnableRegistryResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *SingleRegistryResponse
+	JSON201      *SingleRegistryResponse
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r EnableRegistryResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r EnableRegistryResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListRegistryRepositoriesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		// NextLast Pass as `last` to get the next page; null on the last page.
+		NextLast *string `json:"next_last"`
+
+		// Repositories Repository names without the project prefix.
+		Repositories []string `json:"repositories"`
+	}
+	JSONDefault *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListRegistryRepositoriesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListRegistryRepositoriesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteRegistryManifestResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteRegistryManifestResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteRegistryManifestResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListRegistryTagsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		// NextLast Pass as `last` to get the next page; null on the last page.
+		NextLast *string       `json:"next_last"`
+		Tags     []RegistryTag `json:"tags"`
+	}
+	JSONDefault *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListRegistryTagsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListRegistryTagsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteRegistryTagResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSONDefault  *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteRegistryTagResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteRegistryTagResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -6034,6 +7123,67 @@ func (c *ClientWithResponses) GetKubernetesClusterCredentialsWithResponse(ctx co
 	return ParseGetKubernetesClusterCredentialsResponse(rsp)
 }
 
+// ListNodePoolsWithResponse request returning *ListNodePoolsResponse
+func (c *ClientWithResponses) ListNodePoolsWithResponse(ctx context.Context, clusterId string, params *ListNodePoolsParams, reqEditors ...RequestEditorFn) (*ListNodePoolsResponse, error) {
+	rsp, err := c.ListNodePools(ctx, clusterId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListNodePoolsResponse(rsp)
+}
+
+// CreateNodePoolWithBodyWithResponse request with arbitrary body returning *CreateNodePoolResponse
+func (c *ClientWithResponses) CreateNodePoolWithBodyWithResponse(ctx context.Context, clusterId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateNodePoolResponse, error) {
+	rsp, err := c.CreateNodePoolWithBody(ctx, clusterId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateNodePoolResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateNodePoolWithResponse(ctx context.Context, clusterId string, body CreateNodePoolJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateNodePoolResponse, error) {
+	rsp, err := c.CreateNodePool(ctx, clusterId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateNodePoolResponse(rsp)
+}
+
+// DeleteNodePoolWithResponse request returning *DeleteNodePoolResponse
+func (c *ClientWithResponses) DeleteNodePoolWithResponse(ctx context.Context, clusterId string, nodePoolId string, reqEditors ...RequestEditorFn) (*DeleteNodePoolResponse, error) {
+	rsp, err := c.DeleteNodePool(ctx, clusterId, nodePoolId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteNodePoolResponse(rsp)
+}
+
+// GetNodePoolWithResponse request returning *GetNodePoolResponse
+func (c *ClientWithResponses) GetNodePoolWithResponse(ctx context.Context, clusterId string, nodePoolId string, reqEditors ...RequestEditorFn) (*GetNodePoolResponse, error) {
+	rsp, err := c.GetNodePool(ctx, clusterId, nodePoolId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetNodePoolResponse(rsp)
+}
+
+// UpdateNodePoolWithBodyWithResponse request with arbitrary body returning *UpdateNodePoolResponse
+func (c *ClientWithResponses) UpdateNodePoolWithBodyWithResponse(ctx context.Context, clusterId string, nodePoolId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateNodePoolResponse, error) {
+	rsp, err := c.UpdateNodePoolWithBody(ctx, clusterId, nodePoolId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateNodePoolResponse(rsp)
+}
+
+func (c *ClientWithResponses) UpdateNodePoolWithResponse(ctx context.Context, clusterId string, nodePoolId string, body UpdateNodePoolJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateNodePoolResponse, error) {
+	rsp, err := c.UpdateNodePool(ctx, clusterId, nodePoolId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateNodePoolResponse(rsp)
+}
+
 // ListLoadbalancersWithResponse request returning *ListLoadbalancersResponse
 func (c *ClientWithResponses) ListLoadbalancersWithResponse(ctx context.Context, params *ListLoadbalancersParams, reqEditors ...RequestEditorFn) (*ListLoadbalancersResponse, error) {
 	rsp, err := c.ListLoadbalancers(ctx, params, reqEditors...)
@@ -6163,6 +7313,69 @@ func (c *ClientWithResponses) GetQuotasWithResponse(ctx context.Context, reqEdit
 		return nil, err
 	}
 	return ParseGetQuotasResponse(rsp)
+}
+
+// DisableRegistryWithResponse request returning *DisableRegistryResponse
+func (c *ClientWithResponses) DisableRegistryWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*DisableRegistryResponse, error) {
+	rsp, err := c.DisableRegistry(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDisableRegistryResponse(rsp)
+}
+
+// GetRegistryWithResponse request returning *GetRegistryResponse
+func (c *ClientWithResponses) GetRegistryWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetRegistryResponse, error) {
+	rsp, err := c.GetRegistry(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetRegistryResponse(rsp)
+}
+
+// EnableRegistryWithResponse request returning *EnableRegistryResponse
+func (c *ClientWithResponses) EnableRegistryWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*EnableRegistryResponse, error) {
+	rsp, err := c.EnableRegistry(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseEnableRegistryResponse(rsp)
+}
+
+// ListRegistryRepositoriesWithResponse request returning *ListRegistryRepositoriesResponse
+func (c *ClientWithResponses) ListRegistryRepositoriesWithResponse(ctx context.Context, params *ListRegistryRepositoriesParams, reqEditors ...RequestEditorFn) (*ListRegistryRepositoriesResponse, error) {
+	rsp, err := c.ListRegistryRepositories(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListRegistryRepositoriesResponse(rsp)
+}
+
+// DeleteRegistryManifestWithResponse request returning *DeleteRegistryManifestResponse
+func (c *ClientWithResponses) DeleteRegistryManifestWithResponse(ctx context.Context, repository string, digest string, reqEditors ...RequestEditorFn) (*DeleteRegistryManifestResponse, error) {
+	rsp, err := c.DeleteRegistryManifest(ctx, repository, digest, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteRegistryManifestResponse(rsp)
+}
+
+// ListRegistryTagsWithResponse request returning *ListRegistryTagsResponse
+func (c *ClientWithResponses) ListRegistryTagsWithResponse(ctx context.Context, repository string, params *ListRegistryTagsParams, reqEditors ...RequestEditorFn) (*ListRegistryTagsResponse, error) {
+	rsp, err := c.ListRegistryTags(ctx, repository, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListRegistryTagsResponse(rsp)
+}
+
+// DeleteRegistryTagWithResponse request returning *DeleteRegistryTagResponse
+func (c *ClientWithResponses) DeleteRegistryTagWithResponse(ctx context.Context, repository string, tag string, reqEditors ...RequestEditorFn) (*DeleteRegistryTagResponse, error) {
+	rsp, err := c.DeleteRegistryTag(ctx, repository, tag, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteRegistryTagResponse(rsp)
 }
 
 // GetReservationsWithResponse request returning *GetReservationsResponse
@@ -6993,6 +8206,13 @@ func ParseUpdateInstanceResponse(rsp *http.Response) (*UpdateInstanceResponse, e
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest QuotaExceeded
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -7375,6 +8595,178 @@ func ParseGetKubernetesClusterCredentialsResponse(rsp *http.Response) (*GetKuber
 	return response, nil
 }
 
+// ParseListNodePoolsResponse parses an HTTP response from a ListNodePoolsWithResponse call
+func ParseListNodePoolsResponse(rsp *http.Response) (*ListNodePoolsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListNodePoolsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest PaginatedNodePoolsResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateNodePoolResponse parses an HTTP response from a CreateNodePoolWithResponse call
+func ParseCreateNodePoolResponse(rsp *http.Response) (*CreateNodePoolResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateNodePoolResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest SingleNodePoolResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest QuotaExceeded
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteNodePoolResponse parses an HTTP response from a DeleteNodePoolWithResponse call
+func ParseDeleteNodePoolResponse(rsp *http.Response) (*DeleteNodePoolResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteNodePoolResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetNodePoolResponse parses an HTTP response from a GetNodePoolWithResponse call
+func ParseGetNodePoolResponse(rsp *http.Response) (*GetNodePoolResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetNodePoolResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SingleNodePoolResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateNodePoolResponse parses an HTTP response from a UpdateNodePoolWithResponse call
+func ParseUpdateNodePoolResponse(rsp *http.Response) (*UpdateNodePoolResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateNodePoolResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SingleNodePoolResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest QuotaExceeded
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListLoadbalancersResponse parses an HTTP response from a ListLoadbalancersWithResponse call
 func ParseListLoadbalancersResponse(rsp *http.Response) (*ListLoadbalancersResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -7719,6 +9111,233 @@ func ParseGetQuotasResponse(rsp *http.Response) (*GetQuotasResponse, error) {
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDisableRegistryResponse parses an HTTP response from a DisableRegistryWithResponse call
+func ParseDisableRegistryResponse(rsp *http.Response) (*DisableRegistryResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DisableRegistryResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetRegistryResponse parses an HTTP response from a GetRegistryWithResponse call
+func ParseGetRegistryResponse(rsp *http.Response) (*GetRegistryResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetRegistryResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SingleRegistryResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseEnableRegistryResponse parses an HTTP response from a EnableRegistryWithResponse call
+func ParseEnableRegistryResponse(rsp *http.Response) (*EnableRegistryResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &EnableRegistryResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SingleRegistryResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest SingleRegistryResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListRegistryRepositoriesResponse parses an HTTP response from a ListRegistryRepositoriesWithResponse call
+func ParseListRegistryRepositoriesResponse(rsp *http.Response) (*ListRegistryRepositoriesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListRegistryRepositoriesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			// NextLast Pass as `last` to get the next page; null on the last page.
+			NextLast *string `json:"next_last"`
+
+			// Repositories Repository names without the project prefix.
+			Repositories []string `json:"repositories"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteRegistryManifestResponse parses an HTTP response from a DeleteRegistryManifestWithResponse call
+func ParseDeleteRegistryManifestResponse(rsp *http.Response) (*DeleteRegistryManifestResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteRegistryManifestResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListRegistryTagsResponse parses an HTTP response from a ListRegistryTagsWithResponse call
+func ParseListRegistryTagsResponse(rsp *http.Response) (*ListRegistryTagsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListRegistryTagsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			// NextLast Pass as `last` to get the next page; null on the last page.
+			NextLast *string       `json:"next_last"`
+			Tags     []RegistryTag `json:"tags"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteRegistryTagResponse parses an HTTP response from a DeleteRegistryTagWithResponse call
+func ParseDeleteRegistryTagResponse(rsp *http.Response) (*DeleteRegistryTagResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteRegistryTagResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
 		var dest ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
