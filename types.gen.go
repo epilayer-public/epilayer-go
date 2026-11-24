@@ -130,6 +130,21 @@ var AllInstanceStatuss = []InstanceStatus{
 	InstanceStatusStopping,
 }
 
+// Defines values for InstanceStopReason.
+const (
+	InstanceStopReasonGuestShutdown InstanceStopReason = "guest_shutdown"
+	InstanceStopReasonHostFailure   InstanceStopReason = "host_failure"
+	InstanceStopReasonInstanceCrash InstanceStopReason = "instance_crash"
+	InstanceStopReasonUser          InstanceStopReason = "user"
+)
+
+var AllInstanceStopReasons = []InstanceStopReason{
+	InstanceStopReasonGuestShutdown,
+	InstanceStopReasonHostFailure,
+	InstanceStopReasonInstanceCrash,
+	InstanceStopReasonUser,
+}
+
 // Defines values for KubernetesClusterStatus.
 const (
 	KubernetesClusterStatusActive    KubernetesClusterStatus = "active"
@@ -219,6 +234,19 @@ var AllRegions = []Region{
 	RegionNORDNOKRS1,
 }
 
+// Defines values for RegistryState.
+const (
+	RegistryStateDeleting     RegistryState = "deleting"
+	RegistryStateProvisioning RegistryState = "provisioning"
+	RegistryStateReady        RegistryState = "ready"
+)
+
+var AllRegistryStates = []RegistryState{
+	RegistryStateDeleting,
+	RegistryStateProvisioning,
+	RegistryStateReady,
+}
+
 // Defines values for SecurityGroupRuleDirection.
 const (
 	SecurityGroupRuleDirectionEgress  SecurityGroupRuleDirection = "egress"
@@ -228,21 +256,6 @@ const (
 var AllSecurityGroupRuleDirections = []SecurityGroupRuleDirection{
 	SecurityGroupRuleDirectionEgress,
 	SecurityGroupRuleDirectionIngress,
-}
-
-// Defines values for SecurityGroupRuleProtocol.
-const (
-	SecurityGroupRuleProtocolAll  SecurityGroupRuleProtocol = "all"
-	SecurityGroupRuleProtocolIcmp SecurityGroupRuleProtocol = "icmp"
-	SecurityGroupRuleProtocolTcp  SecurityGroupRuleProtocol = "tcp"
-	SecurityGroupRuleProtocolUdp  SecurityGroupRuleProtocol = "udp"
-)
-
-var AllSecurityGroupRuleProtocols = []SecurityGroupRuleProtocol{
-	SecurityGroupRuleProtocolAll,
-	SecurityGroupRuleProtocolIcmp,
-	SecurityGroupRuleProtocolTcp,
-	SecurityGroupRuleProtocolUdp,
 }
 
 // Defines values for SecurityGroupStatus.
@@ -327,6 +340,32 @@ var AllCreateLoadbalancerJSONBodyHealthCheckProtocols = []CreateLoadbalancerJSON
 	CreateLoadbalancerJSONBodyHealthCheckProtocolTcp,
 }
 
+// CreateNodePool Worker nodes are created with an ephemeral public IPv4 address, which is required
+// to reach the cluster's control plane endpoint.
+type CreateNodePool struct {
+	// Count Desired number of worker nodes.
+	Count NodePoolCount `json:"count"`
+
+	// Image A unique number that can be used to identify and reference a specific image.
+	Image ImageId `json:"image"`
+
+	// Name Name of the node pool, unique within its cluster.
+	Name NodePoolName `json:"name"`
+
+	// PrivateNetworks Private network IDs for the worker nodes. Must include the cluster's network.
+	// If omitted, defaults to the cluster's network only.
+	PrivateNetworks *[]PrivateNetworkId `json:"private_networks"`
+
+	// SecurityGroups Security group IDs to attach to the worker nodes.
+	SecurityGroups *[]SecurityGroupId `json:"security_groups"`
+
+	// SshKeys SSH key IDs to install on the worker nodes.
+	SshKeys []InstanceSSHKeyId `json:"ssh_keys"`
+
+	// Type The instance type identifier.
+	Type InstanceType `json:"type"`
+}
+
 // Error defines model for Error.
 type Error struct {
 	// Code The EpiLayer error code.
@@ -344,7 +383,7 @@ type Error struct {
 type Filesystem struct {
 	CreatedAt Timestamp `json:"created_at"`
 
-	// Description The human-readable description for the filesystem.
+	// Description The description for the filesystem.
 	Description string `json:"description"`
 
 	// Id A unique identifier for each filesystem. This is automatically generated.
@@ -385,7 +424,7 @@ type FilesystemType string
 type FloatingIP struct {
 	CreatedAt Timestamp `json:"created_at"`
 
-	// Description The human-readable description for the floating IP.
+	// Description The description for the floating IP.
 	Description string `json:"description"`
 
 	// Id A unique identifier for each floating IP. This is automatically generated.
@@ -559,6 +598,11 @@ type Instance struct {
 	// Status The instance status
 	Status InstanceStatus `json:"status"`
 
+	// StopReason Why the instance stopped: `host_failure` (its host failed), `instance_crash` (the instance crashed),
+	// `guest_shutdown` (it was shut down from inside the guest) or `user` (it was stopped through the API or UI).
+	// `null` while the instance runs, or when the reason is unknown.
+	StopReason *InstanceStopReason `json:"stop_reason"`
+
 	// Type The instance type identifier.
 	Type      InstanceType `json:"type"`
 	UpdatedAt Timestamp    `json:"updated_at"`
@@ -632,6 +676,11 @@ type InstanceSSHKeyId = string
 // InstanceStatus The instance status
 type InstanceStatus string
 
+// InstanceStopReason Why the instance stopped: `host_failure` (its host failed), `instance_crash` (the instance crashed),
+// `guest_shutdown` (it was shut down from inside the guest) or `user` (it was stopped through the API or UI).
+// `null` while the instance runs, or when the reason is unknown.
+type InstanceStopReason string
+
 // InstanceType The instance type identifier.
 type InstanceType = string
 
@@ -655,7 +704,8 @@ type InstanceUpdateSecurityGroupsDetach struct {
 // InstanceUpdateSecurityGroupsList The instance's security group IDs.
 type InstanceUpdateSecurityGroupsList = []SecurityGroupId
 
-// InstanceUpdateVolumes defines model for Instance.UpdateVolumes.
+// InstanceUpdateVolumes A volume can be attached to only one instance at a time. Attaching a volume
+// that another instance (running or stopped) already uses is rejected with 409.
 type InstanceUpdateVolumes struct {
 	union json.RawMessage
 }
@@ -736,7 +786,7 @@ type KubernetesClusterStatus string
 type Loadbalancer struct {
 	CreatedAt Timestamp `json:"created_at"`
 
-	// Description The human-readable description for the load balancer.
+	// Description The description for the load balancer.
 	Description string `json:"description"`
 
 	// ExternalIp The external IP of the load balancer.
@@ -795,6 +845,92 @@ type LoadbalancerPort struct {
 // LoadbalancerStatus The load balancer status.
 type LoadbalancerStatus string
 
+// NodePool A set of worker nodes of a Kubernetes cluster that the platform keeps at the
+// desired count. A worker node that is stopped or failed for 2 minutes is deleted
+// and replaced by a new one from the same configuration. A new worker node starts
+// from the image on a fresh boot disk and joins the cluster; anything stored on the
+// boot disk of the replaced one is lost.
+type NodePool struct {
+	// ClusterId The Kubernetes cluster the worker nodes join.
+	ClusterId string `json:"cluster_id"`
+
+	// Count Desired number of worker nodes.
+	Count     NodePoolCount `json:"count"`
+	CreatedAt Timestamp     `json:"created_at"`
+
+	// Id The node pool ID.
+	Id string `json:"id"`
+
+	// Image A unique number that can be used to identify and reference a specific image.
+	Image ImageId `json:"image"`
+
+	// ManagedBy The platform service that manages the node pool, such as `database/<id>` for the
+	// dedicated worker nodes of a Database service, or `null` for the customer's own
+	// node pools. A managed node pool cannot be scaled, renamed or deleted, and its
+	// worker nodes cannot be updated, started, stopped, reset or deleted (`403
+	// Forbidden`); it is removed together with the service that manages it.
+	ManagedBy *string `json:"managed_by"`
+
+	// Name Name of the node pool, unique within its cluster.
+	Name            NodePoolName       `json:"name"`
+	PrivateNetworks []PrivateNetworkId `json:"private_networks"`
+	SecurityGroups  []SecurityGroupId  `json:"security_groups"`
+	SshKeys         []InstanceSSHKeyId `json:"ssh_keys"`
+
+	// Status What the platform currently runs for the node pool.
+	Status NodePoolStatus `json:"status"`
+
+	// Type The instance type identifier.
+	Type      InstanceType `json:"type"`
+	UpdatedAt Timestamp    `json:"updated_at"`
+}
+
+// NodePoolCount Desired number of worker nodes.
+type NodePoolCount = int
+
+// NodePoolName Name of the node pool, unique within its cluster.
+type NodePoolName = string
+
+// NodePoolStatus What the platform currently runs for the node pool.
+type NodePoolStatus struct {
+	// BackoffUntil Set while worker nodes keep failing soon after they start: no worker node is
+	// replaced before this time.
+	BackoffUntil *time.Time `json:"backoff_until"`
+
+	// MemberCount Number of worker nodes that exist.
+	MemberCount int `json:"member_count"`
+	Members     []struct {
+		// InstanceId The instance ID of the worker node.
+		InstanceId string `json:"instance_id"`
+
+		// State The state of the worker node's instance.
+		State string `json:"state"`
+
+		// StopReason Why the worker node stopped, if it did.
+		StopReason *string `json:"stop_reason"`
+	} `json:"members"`
+
+	// Replacements The most recent replacements of worker nodes, oldest first.
+	Replacements []struct {
+		// InstanceId The instance ID of the replaced worker node.
+		InstanceId string `json:"instance_id"`
+
+		// ReplacementInstanceId The instance ID of the new worker node.
+		ReplacementInstanceId string `json:"replacement_instance_id"`
+
+		// StopReason Why the replaced worker node stopped.
+		StopReason *string    `json:"stop_reason"`
+		Time       *Timestamp `json:"time,omitempty"`
+	} `json:"replacements"`
+
+	// RunningCount Number of worker nodes that are running.
+	RunningCount int `json:"running_count"`
+
+	// UnschedulableMembers Instance IDs of worker nodes that cannot be scheduled for lack of capacity.
+	// They are not replaced.
+	UnschedulableMembers []string `json:"unschedulable_members"`
+}
+
 // OSType The OS type.
 type OSType string
 
@@ -807,7 +943,7 @@ type PrivateNetwork struct {
 	CidrV6    *string   `json:"cidr_v6"`
 	CreatedAt Timestamp `json:"created_at"`
 
-	// Description The human-readable description for the private network.
+	// Description The description for the private network.
 	Description string `json:"description"`
 
 	// GatewayIpv4 The IPv4 default gateway advertised to instances via DHCP.
@@ -888,6 +1024,49 @@ type QuotaExceededError struct {
 // Region The legacy region identifier. Deprecated, the Region follows from the API endpoint.
 type Region string
 
+// Registry defines model for Registry.
+type Registry struct {
+	// CreatedAt When the registry was enabled.
+	CreatedAt *time.Time `json:"created_at"`
+
+	// DockerLogin Command to log in with a personal access token or service user token.
+	DockerLogin string `json:"docker_login"`
+
+	// LoginServer Host to log in to, e.g. with docker login.
+	LoginServer string `json:"login_server"`
+
+	// RepositoryPrefix Every repository of the project is `<repository_prefix>/<repository>`.
+	RepositoryPrefix string `json:"repository_prefix"`
+
+	// State provisioning until the registry can be used.
+	State RegistryState `json:"state"`
+
+	// Usage Storage used against the project's `registry-storage` quota, approximate and updated every minute.
+	Usage RegistryUsage `json:"usage"`
+}
+
+// RegistryState provisioning until the registry can be used.
+type RegistryState string
+
+// RegistryTag defines model for Registry.Tag.
+type RegistryTag struct {
+	// Digest Digest of the manifest or image index the tag points to.
+	Digest *string `json:"digest"`
+	Name   string  `json:"name"`
+}
+
+// RegistryUsage Storage used against the project's `registry-storage` quota, approximate and updated every minute.
+type RegistryUsage struct {
+	// LimitBytes The `registry-storage` quota in bytes (-1 is unlimited); null without a quota.
+	LimitBytes *int64 `json:"limit_bytes"`
+
+	// UpdatedAt When the usage was last measured.
+	UpdatedAt *time.Time `json:"updated_at"`
+
+	// UsedBytes Bytes stored; null until first measured.
+	UsedBytes *int64 `json:"used_bytes"`
+}
+
 // Reservation defines model for Reservation.
 type Reservation struct {
 	FlavorName string                 `json:"flavor_name"`
@@ -931,7 +1110,7 @@ type SSHKey struct {
 type SecurityGroup struct {
 	CreatedAt Timestamp `json:"created_at"`
 
-	// Description The human-readable description for the security group.
+	// Description The description for the security group.
 	Description string `json:"description"`
 
 	// Id A unique identifier for each security group. This is automatically generated.
@@ -956,21 +1135,21 @@ type SecurityGroupRule struct {
 	// Direction The direction of the rule.
 	Direction SecurityGroupRuleDirection `json:"direction"`
 
-	// PortRangeMax The maximum port number of the rule.
+	// PortRangeMax The maximum port number of the rule. `null` means the highest port (or ICMP type) of the protocol. Ports only apply to `tcp` and `udp`, and ICMP types to `icmp`. For any other protocol, leave it `null` or set 65535.
 	PortRangeMax *int `json:"port_range_max"`
 
-	// PortRangeMin The minimum port number of the rule.
+	// PortRangeMin The minimum port number of the rule. `null` means the lowest port (or ICMP type) of the protocol. Ports only apply to `tcp` and `udp`, and ICMP types to `icmp`. For any other protocol, leave it `null` or set 0.
 	PortRangeMin *int `json:"port_range_min"`
 
-	// Protocol The protocol of the rule.
+	// Protocol The protocol of the rule: `tcp`, `udp`, `icmp`, `all` (every IP protocol) or an IP protocol number from 0 to 255, e.g. `112` for VRRP, `47` for GRE, `50` for ESP or `51` for AH. The numbers 1, 6, 17 and 58 are stored as `icmp`, `tcp`, `udp` and `icmp`.
 	Protocol SecurityGroupRuleProtocol `json:"protocol"`
 }
 
 // SecurityGroupRuleDirection The direction of the rule.
 type SecurityGroupRuleDirection string
 
-// SecurityGroupRuleProtocol The protocol of the rule.
-type SecurityGroupRuleProtocol string
+// SecurityGroupRuleProtocol The protocol of the rule: `tcp`, `udp`, `icmp`, `all` (every IP protocol) or an IP protocol number from 0 to 255, e.g. `112` for VRRP, `47` for GRE, `50` for ESP or `51` for AH. The numbers 1, 6, 17 and 58 are stored as `icmp`, `tcp`, `udp` and `icmp`.
+type SecurityGroupRuleProtocol = string
 
 // SecurityGroupStatus The security group status.
 type SecurityGroupStatus string
@@ -981,6 +1160,9 @@ type SecurityGroupId = string
 // Snapshot defines model for Snapshot.
 type Snapshot struct {
 	CreatedAt Timestamp `json:"created_at"`
+
+	// Description The description for the snapshot.
+	Description *string `json:"description,omitempty"`
 
 	// Id A unique identifier for each snapshot. This is automatically generated.
 	Id string `json:"id"`
@@ -1017,11 +1199,20 @@ type SnapshotStatus string
 // Timestamp defines model for Timestamp.
 type Timestamp = time.Time
 
+// UpdateNodePool defines model for UpdateNodePool.
+type UpdateNodePool struct {
+	// Count Desired number of worker nodes.
+	Count *NodePoolCount `json:"count,omitempty"`
+
+	// Name Name of the node pool, unique within its cluster.
+	Name *NodePoolName `json:"name,omitempty"`
+}
+
 // Volume defines model for Volume.
 type Volume struct {
 	CreatedAt Timestamp `json:"created_at"`
 
-	// Description The human-readable description for the volume.
+	// Description The description for the volume.
 	Description string `json:"description"`
 
 	// Id A unique identifier for each volume. This is automatically generated.
@@ -1062,6 +1253,7 @@ type VolumeId = string
 type VolumeType string
 
 // WorkerNodeConfig Configuration for worker nodes to create alongside a Kubernetes cluster.
+// They become a node pool named `default`.
 // Worker nodes are created with an ephemeral public IPv4 address, which is
 // required to reach the cluster's control plane endpoint.
 type WorkerNodeConfig struct {
@@ -1107,7 +1299,11 @@ type PerPageQueryParameter = int
 type KubernetesClusterCreatedResponse struct {
 	Cluster KubernetesCluster `json:"cluster"`
 
-	// WorkerNodes Results for each worker node creation attempt. Present only when worker_nodes was requested.
+	// NodePool The node pool created from worker_nodes, if it was requested.
+	NodePool *NodePool `json:"node_pool"`
+
+	// WorkerNodes Present only when worker_nodes was requested and the node pool could not
+	// be created: the error, under the node pool's name.
 	WorkerNodes *[]WorkerNodeResult `json:"worker_nodes"`
 }
 
@@ -1180,6 +1376,14 @@ type PaginatedLoadbalancersResponse struct {
 	Page          int            `json:"page"`
 	PerPage       int            `json:"per_page"`
 	TotalCount    int            `json:"total_count"`
+}
+
+// PaginatedNodePoolsResponse defines model for PaginatedNodePoolsResponse.
+type PaginatedNodePoolsResponse struct {
+	NodePools  []NodePool `json:"node_pools"`
+	Page       int        `json:"page"`
+	PerPage    int        `json:"per_page"`
+	TotalCount int        `json:"total_count"`
 }
 
 // PaginatedPrivateNetworksResponse defines model for PaginatedPrivateNetworksResponse.
@@ -1261,9 +1465,24 @@ type SingleLoadbalancerResponse struct {
 	Loadbalancer Loadbalancer `json:"loadbalancer"`
 }
 
+// SingleNodePoolResponse defines model for SingleNodePoolResponse.
+type SingleNodePoolResponse struct {
+	// NodePool A set of worker nodes of a Kubernetes cluster that the platform keeps at the
+	// desired count. A worker node that is stopped or failed for 2 minutes is deleted
+	// and replaced by a new one from the same configuration. A new worker node starts
+	// from the image on a fresh boot disk and joins the cluster; anything stored on the
+	// boot disk of the replaced one is lost.
+	NodePool NodePool `json:"node_pool"`
+}
+
 // SinglePrivateNetworkResponse defines model for SinglePrivateNetworkResponse.
 type SinglePrivateNetworkResponse struct {
 	PrivateNetwork PrivateNetwork `json:"private_network"`
+}
+
+// SingleRegistryResponse defines model for SingleRegistryResponse.
+type SingleRegistryResponse struct {
+	Registry Registry `json:"registry"`
 }
 
 // SingleSSHKeyResponse defines model for SingleSSHKeyResponse.
@@ -1302,7 +1521,7 @@ type ListFilesystemsPaginatedParams struct {
 
 // CreateFilesystemJSONBody defines parameters for CreateFilesystem.
 type CreateFilesystemJSONBody struct {
-	// Description The human-readable description set for the filesystem.
+	// Description The description set for the filesystem.
 	Description *string `json:"description,omitempty"`
 
 	// Name The human-readable name set for the filesystem.
@@ -1321,7 +1540,7 @@ type CreateFilesystemJSONBody struct {
 
 // UpdateFilesystemJSONBody defines parameters for UpdateFilesystem.
 type UpdateFilesystemJSONBody struct {
-	// Description The human-readable description set for the filesystem.
+	// Description The description set for the filesystem.
 	Description *string `json:"description,omitempty"`
 
 	// Name The human-readable name set for the filesystem.
@@ -1339,7 +1558,7 @@ type ListFloatingIPsPaginatedParams struct {
 
 // CreateFloatingIPJSONBody defines parameters for CreateFloatingIP.
 type CreateFloatingIPJSONBody struct {
-	// Description The human-readable description set for the floating IP.
+	// Description The description set for the floating IP.
 	Description *string `json:"description,omitempty"`
 
 	// Name The human-readable name set for the floating IP.
@@ -1358,7 +1577,7 @@ type CreateFloatingIPJSONBodyVersion string
 
 // UpdateFloatingIPJSONBody defines parameters for UpdateFloatingIP.
 type UpdateFloatingIPJSONBody struct {
-	// Description The human-readable description set for the floating IP.
+	// Description The description set for the floating IP.
 	Description *string `json:"description,omitempty"`
 
 	// Name The human-readable name set for the floating IP.
@@ -1462,7 +1681,9 @@ type CreateInstanceJSONBody struct {
 	// Type The instance type identifier.
 	Type InstanceType `json:"type"`
 
-	// Volumes An array of volume ids.
+	// Volumes An array of volume ids. A volume can be attached to only one
+	// instance at a time; a volume that another instance (running or
+	// stopped) already uses is rejected with 409.
 	Volumes *[]VolumeId `json:"volumes,omitempty"`
 }
 
@@ -1474,8 +1695,18 @@ type UpdateInstanceJSONBody struct {
 	// The change only takes effect the next time the instance is started or reset.
 	BootFromNetbootXyz *InstanceBootFromNetbootXyz `json:"boot_from_netboot_xyz,omitempty"`
 
-	// DiskSize The storage size of the instance's boot volume given in GiB.
-	DiskSize *InstanceDiskSize `json:"disk_size,omitempty"`
+	// DiskSize The new size of the instance's boot volume given in GiB. The boot volume
+	// can only grow: a smaller size fails with `400 Bad Request`, the current
+	// size changes nothing. The growth is charged against the block storage
+	// quota. Fails with `409 Conflict` while the boot volume is still being
+	// created. The boot volume is grown before the rest of the update is
+	// applied: if the rest fails, the boot volume stays grown, and retrying the
+	// same request is safe. The instance may keep running; the guest sees the
+	// larger disk right away, but the partition and filesystem only grow on the
+	// next boot (cloud-init `growpart`/`resize_rootfs`) or when grown inside the
+	// guest, e.g. `growpart /dev/vda 1 && resize2fs /dev/vda1` for ext4 or
+	// `growpart /dev/vda 1 && xfs_growfs /` for XFS.
+	DiskSize *int `json:"disk_size,omitempty"`
 
 	// IsProtected Specifies if the instance is termination protected.
 	// When set to `true`, it"s not possible to destroy the instance until it"s switched to `false`.
@@ -1488,7 +1719,10 @@ type UpdateInstanceJSONBody struct {
 	// ReservationId The unique ID of the reservation the instance is associated with.
 	ReservationId  *string                       `json:"reservation_id,omitempty"`
 	SecurityGroups *InstanceUpdateSecurityGroups `json:"security_groups,omitempty"`
-	Volumes        *InstanceUpdateVolumes        `json:"volumes,omitempty"`
+
+	// Volumes A volume can be attached to only one instance at a time. Attaching a volume
+	// that another instance (running or stopped) already uses is rejected with 409.
+	Volumes *InstanceUpdateVolumes `json:"volumes,omitempty"`
 }
 
 // PerformInstanceActionJSONBody defines parameters for PerformInstanceAction.
@@ -1504,6 +1738,9 @@ type ListInstanceSnapshotsPaginatedParams struct {
 
 // CreateInstanceSnapshotJSONBody defines parameters for CreateInstanceSnapshot.
 type CreateInstanceSnapshotJSONBody struct {
+	// Description The description set for the snapshot.
+	Description *string `json:"description,omitempty"`
+
 	// Name Name of the snapshot.
 	Name string `json:"name"`
 }
@@ -1530,6 +1767,7 @@ type CreateKubernetesClusterJSONBody struct {
 	Network *string `json:"network"`
 
 	// WorkerNodes Configuration for worker nodes to create alongside a Kubernetes cluster.
+	// They become a node pool named `default`.
 	// Worker nodes are created with an ephemeral public IPv4 address, which is
 	// required to reach the cluster's control plane endpoint.
 	WorkerNodes *WorkerNodeConfig `json:"worker_nodes,omitempty"`
@@ -1541,6 +1779,12 @@ type UpdateKubernetesClusterJSONBody struct {
 	Network *string `json:"network"`
 }
 
+// ListNodePoolsParams defines parameters for ListNodePools.
+type ListNodePoolsParams struct {
+	Page    *PageQueryParameter    `form:"page,omitempty" json:"page,omitempty"`
+	PerPage *PerPageQueryParameter `form:"per_page,omitempty" json:"per_page,omitempty"`
+}
+
 // ListLoadbalancersParams defines parameters for ListLoadbalancers.
 type ListLoadbalancersParams struct {
 	Page    *PageQueryParameter    `form:"page,omitempty" json:"page,omitempty"`
@@ -1549,7 +1793,7 @@ type ListLoadbalancersParams struct {
 
 // CreateLoadbalancerJSONBody defines parameters for CreateLoadbalancer.
 type CreateLoadbalancerJSONBody struct {
-	// Description The human-readable description for the load balancer.
+	// Description The description for the load balancer.
 	Description *string `json:"description,omitempty"`
 
 	// FloatingIpId The ID of an existing floating IP to use as the external IP of the load balancer.
@@ -1579,7 +1823,7 @@ type CreateLoadbalancerJSONBodyHealthCheckProtocol string
 
 // UpdateLoadbalancerJSONBody defines parameters for UpdateLoadbalancer.
 type UpdateLoadbalancerJSONBody struct {
-	// Description The human-readable description for the load balancer.
+	// Description The description for the load balancer.
 	Description *string `json:"description,omitempty"`
 
 	// FloatingIpId The ID of an existing floating IP to use as the external IP of the load balancer.
@@ -1606,7 +1850,7 @@ type CreatePrivateNetworkJSONBody struct {
 	// CidrV6 The IPv6 CIDR block for the private network.
 	CidrV6 *string `json:"cidr_v6,omitempty"`
 
-	// Description The human-readable description set for the private network.
+	// Description The description set for the private network.
 	Description *string `json:"description,omitempty"`
 
 	// GatewayIpv4 The IPv4 default gateway to advertise to instances via DHCP.
@@ -1623,11 +1867,29 @@ type CreatePrivateNetworkJSONBody struct {
 
 // UpdatePrivateNetworkJSONBody defines parameters for UpdatePrivateNetwork.
 type UpdatePrivateNetworkJSONBody struct {
-	// Description The human-readable description set for the private network.
+	// Description The description set for the private network. An empty string clears it; leaving it out or sending null keeps the current description.
 	Description *string `json:"description,omitempty"`
 
 	// Name The human-readable name set for the private network.
 	Name *string `json:"name,omitempty"`
+}
+
+// ListRegistryRepositoriesParams defines parameters for ListRegistryRepositories.
+type ListRegistryRepositoriesParams struct {
+	// Limit Page size.
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Last The `next_last` of the previous page; omit for the first page.
+	Last *string `form:"last,omitempty" json:"last,omitempty"`
+}
+
+// ListRegistryTagsParams defines parameters for ListRegistryTags.
+type ListRegistryTagsParams struct {
+	// Limit Page size.
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Last The `next_last` of the previous page; omit for the first page.
+	Last *string `form:"last,omitempty" json:"last,omitempty"`
 }
 
 // ListSecurityGroupsPaginatedParams defines parameters for ListSecurityGroupsPaginated.
@@ -1641,7 +1903,7 @@ type CreateSecurityGroupJSONBody struct {
 	// DefaultEgress Whether to add an egress rule allowing all outbound traffic when `rules` contains no egress rule. Set it to false to create a security group that denies all outbound traffic, or only allows the egress rules given in `rules`.
 	DefaultEgress *bool `json:"default_egress,omitempty"`
 
-	// Description he human-readable description set for the security group.
+	// Description The description set for the security group.
 	Description *string `json:"description,omitempty"`
 
 	// Name The human-readable name set for the security group. **Please Note**: `default` and `standard` are not allowed names (reserved words).
@@ -1657,7 +1919,7 @@ type CreateSecurityGroupJSONBody struct {
 
 // UpdateSecurityGroupJSONBody defines parameters for UpdateSecurityGroup.
 type UpdateSecurityGroupJSONBody struct {
-	// Description he human-readable description set for the security group.
+	// Description The description set for the security group. An empty string clears it; leaving it out or sending null keeps the current description.
 	Description *string `json:"description,omitempty"`
 
 	// Name The human-readable name set for the security group.
@@ -1675,6 +1937,9 @@ type ListSnapshotsPaginatedParams struct {
 
 // CreateSnapshotJSONBody defines parameters for CreateSnapshot.
 type CreateSnapshotJSONBody struct {
+	// Description The description set for the snapshot.
+	Description *string `json:"description,omitempty"`
+
 	// Name The human-readable name set for the snapshot.
 	Name string `json:"name"`
 
@@ -1709,7 +1974,19 @@ type CreateSSHKeyJSONBody struct {
 	// Name The human-readable name for your ssh key.
 	Name string `json:"name"`
 
-	// Value SSH public key.
+	// Value SSH public key as a single line in OpenSSH (`authorized_keys`) format:
+	// `<type> <base64 key> [comment]`, for example the contents of
+	// `~/.ssh/id_ed25519.pub`. Surrounding whitespace, such as a trailing
+	// newline, is allowed.
+	//
+	// Supported types: `ssh-ed25519`, `ssh-rsa` (at least 2048 bits),
+	// `ecdsa-sha2-nistp256`, `ecdsa-sha2-nistp384`, `ecdsa-sha2-nistp521`,
+	// `sk-ssh-ed25519@openssh.com`, `sk-ecdsa-sha2-nistp256@openssh.com`.
+	//
+	// Other formats, such as the SSH2/PuTTY format
+	// (`---- BEGIN SSH2 PUBLIC KEY ----`), are rejected with HTTP 400.
+	// In PuTTYgen, copy the key from the "Public key for pasting into
+	// OpenSSH authorized_keys file" box instead.
 	Value string `json:"value"`
 }
 
@@ -1727,7 +2004,7 @@ type ListVolumesPaginatedParams struct {
 
 // CreateVolumeJSONBody defines parameters for CreateVolume.
 type CreateVolumeJSONBody struct {
-	// Description The human-readable description set for the volume.
+	// Description The description set for the volume.
 	Description *string `json:"description,omitempty"`
 
 	// Name The human-readable name set for the volume.
@@ -1746,7 +2023,7 @@ type CreateVolumeJSONBody struct {
 
 // UpdateVolumeJSONBody defines parameters for UpdateVolume.
 type UpdateVolumeJSONBody struct {
-	// Description The human-readable description set for the volume.
+	// Description The description set for the volume. An empty string clears it; leaving it out or sending null keeps the current description.
 	Description *string `json:"description,omitempty"`
 
 	// Name The human-readable name set for the volume.
@@ -1785,6 +2062,12 @@ type CreateKubernetesClusterJSONRequestBody CreateKubernetesClusterJSONBody
 
 // UpdateKubernetesClusterJSONRequestBody defines body for UpdateKubernetesCluster for application/json ContentType.
 type UpdateKubernetesClusterJSONRequestBody UpdateKubernetesClusterJSONBody
+
+// CreateNodePoolJSONRequestBody defines body for CreateNodePool for application/json ContentType.
+type CreateNodePoolJSONRequestBody = CreateNodePool
+
+// UpdateNodePoolJSONRequestBody defines body for UpdateNodePool for application/json ContentType.
+type UpdateNodePoolJSONRequestBody = UpdateNodePool
 
 // CreateLoadbalancerJSONRequestBody defines body for CreateLoadbalancer for application/json ContentType.
 type CreateLoadbalancerJSONRequestBody CreateLoadbalancerJSONBody
